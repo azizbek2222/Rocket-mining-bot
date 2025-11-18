@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAR MARKET</title>
+
+<!-- Telegram Web App SDK (agar kerak bo'lsa) -->
+<script src="https://telegram.org/js/telegram-web-app.js?56"></script>
+
+<!-- Adexium monetization script -->
+<script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 0;
+    }
+
+    .header {
+        background: #1e88e5;
+        padding: 15px;
+        color: white;
+        font-size: 22px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .search-box {
+        padding: 10px;
+        background: white;
+        display: flex;
+        justify-content: center;
+        border-bottom: 2px solid #1e88e5;
+    }
+
+    .search-box input {
+        width: 90%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+
+    .app-list {
+        padding: 10px;
+    }
+
+    .app {
+        background: white;
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .app img {
+        width: 70px;
+        height: 70px;
+        border-radius: 14px;
+        margin-right: 15px;
+    }
+
+    .app-title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .download-btn {
+        margin-left: auto;
+        padding: 10px 14px;
+        background: #1e88e5;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .download-btn:hover {
+        background: #0d6fd6;
+    }
+</style>
+
+</head>
+<body>
+
+<div class="header">⭐ STAR MARKET</div>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="Ilova qidiring...">
+</div>
+
+<div class="app-list" id="appList">
+    <!-- ILOVALAR RO‘YXATI JS ORQALI -->
+</div>
+
+<script>
+    // ILOVALAR RO‘YXATI
+    const apps = [
+        {
+            name: "Telegram Pro",
+            img: "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg",
+            url: "https://play.google.com/store/apps/details?id=org.telegram.messenger"
+        },
+        {
+            name: "Flash light",
+            img: "IMG_20251116_223427_219.jpg",
+            url: "https://drive.google.com/file/d/16buoYOnzDaw9NNmdlZTTGqCS3BBSvgXU/view?usp=drivesdk"
+        },
+        {
+            name: "Star Browser",
+            img: "https://cdn-icons-png.flaticon.com/512/888/888879.png",
+            url: "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+        },
+        {
+            name: "Music Player X",
+            img: "https://cdn-icons-png.flaticon.com/512/727/727245.png",
+            url: "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+        }
+    ];
+
+    function showApps(list) {
+        const box = document.getElementById("appList");
+        box.innerHTML = "";
+
+        list.forEach(app => {
+            box.innerHTML += `
+                <div class="app">
+                    <img src="${app.img}">
+                    <div>
+                        <div class="app-title">${app.name}</div>
+                    </div>
+                    <button class="download-btn" onclick="showAdAndDownload('${app.url}')">Yuklab olish</button>
+                </div>
+            `;
+        });
+    }
+
+    function showAdAndDownload(url) {
+        // Adexium reklama widgetini yaratish
+        const adexiumWidget = new AdexiumWidget({wid: '7ccc8b4c-5979-46e7-849c-a8225ee70a04', adFormat: 'interstitial'});
+        
+        // Reklamani ko‘rsatish va tugma bosilganda yuklab olishni bajarish
+        adexiumWidget.autoMode({
+            onClose: () => {
+                // Reklama yopilgandan so‘ng faylni yuklab olish
+                window.location.href = url;
+            }
+        });
+    }
+
+    document.getElementById("searchInput").addEventListener("keyup", function () {
+        const text = this.value.toLowerCase();
+        const filtered = apps.filter(app => app.name.toLowerCase().includes(text));
+        showApps(filtered);
+    });
+
+    showApps(apps);
+</script>
+
+</body>
+</html>
