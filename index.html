@@ -293,10 +293,10 @@ let miningInterval = null;
 function onRefillComplete(resource) {
     if (resource === 'fuel') {
         fuel = 100;
-        alert("Yoqilg'i muvaffaqiyatli to'ldirildi (100%)!");
+        alert("Refueling successfully completed (100%)!");
     } else if (resource === 'shield') {
         shield = 100;
-        alert("Qalqon muvaffaqiyatli tiklandi (100%)!");
+        alert("Shield successfully restored (100%)!");
     }
     updateStatus();
     // Reklama tugagandan so'ng darhol Firebase'ga yozish
