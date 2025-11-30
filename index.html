@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<meta charset="UTF-8">
+<title>rocket mining</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #4e9fff, #6ac9ff);
+        text-align: center;
+        padding: 0;
+        margin: 0;
+        overflow-x: hidden;
+        min-height: 100vh;
+        position: relative;
+    }
+    
+    /* === Yangi Joylashuvlar uchun Konteynerlar === */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 10px 15px;
+        box-sizing: border-box;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+    }
+
+    .balance-box {
+        background: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: inline-block;
+        text-align: left;
+    }
+
+    .balance-title {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .balance-value {
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 2px;
+        color: #000;
+    }
+    
+    /* === Withdraw Tugmasi joylashuvi === */
+    .withdraw-btn {
+        padding: 8px 15px;
+        background: #00c16e;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        box-shadow: 0 2px 5px rgba(0,200,120,0.4);
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    /* === Raketa Animatsiyasi Stili === */
+    .main-content {
+        padding-top: 80px;
+    }
+
+    .rocket-container {
+        position: relative;
+        height: 250px; 
+        margin: 20px auto;
+        overflow: hidden; 
+    }
+
+    .rocket-image {
+        width: 150px; 
+        height: auto;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        transition: opacity 0.5s;
+        z-index: 5;
+    }
+
+    .animating {
+        animation: launch 5s ease-in-out infinite alternate;
+    }
+    
+    /* === Bulutlar Stili === */
+    .cloud {
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.7;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        display: none;
+    }
+
+    .cloud1 { width: 80px; height: 30px; top: 180px; left: 10%; animation: floatCloud 20s linear infinite; z-index: 1; }
+    .cloud2 { width: 120px; height: 40px; top: 150px; right: 5%; animation: floatCloud 15s linear infinite reverse; z-index: 1; }
+    .cloud3 { width: 90px; height: 35px; top: 120px; left: 30%; animation: floatCloud 25s linear infinite; z-index: 1; }
+
+    /* === Animatsiyalar === */
+    @keyframes launch {
+        0% { 
+            transform: translate(-50%, 0) rotate(0deg); 
+            opacity: 1;
+        }
+        25% { 
+            transform: translate(-50%, -50px) rotate(1deg); 
+            opacity: 1;
+        } 
+        75% { 
+            transform: translate(-50%, -100px) rotate(-1deg); 
+            opacity: 1;
+        }
+        100% { 
+            transform: translate(-50%, 0) rotate(0deg); 
+        }
+    }
+    
+    @keyframes floatCloud {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(50px); }
+        100% { transform: translateX(0); }
+    }
+
+    /* ================================== */
+    
+    /* === Launch Tugmasi Stili === */
+    .main-btn {
+        margin-top: 20px;
+        padding: 14px 28px;
+        background: linear-gradient(135deg, #007bff, #00a2ff);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 18px;
+        box-shadow: 0 4px 10px rgba(0,123,255,0.4);
+        cursor: pointer;
+    }
+
+    /* === YANGI: Status Bloklari Stili === */
+    .status-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        width: 100%;
+        max-width: 350px;
+        margin: 20px auto 0;
+    }
+
+    .status-item {
+        text-align: center;
+        flex-basis: 45%;
+    }
+
+    .status-icon {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 5px;
+        /* Ikonkalar uchun joylashtirgich - PNG yo'lini o'zgartiring! */
+        background-color: #f0f0f0; 
+        border-radius: 5px;
+        display: inline-block;
+        line-height: 50px;
+        font-size: 20px;
+        color: #555;
+    }
+
+    .status-value {
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+        text-shadow: 0 0 3px #000;
+    }
+
+    .refill-btn {
+        padding: 8px 15px;
+        margin-top: 10px;
+        background: #ff5722;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.3s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    /* Qalqon va Yoqilg'i tugmalari 0% bo'lganda ko'rinishi uchun */
+    .refill-btn.hidden {
+        display: none;
+    }
+
+</style>
+
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="balance-box">
+        <div class="balance-title">Balance</div>
+        <div class="balance-value" id="balance">0.00 ₽</div>
+    </div>
+    
+    <button class="withdraw-btn" onclick="location.href='withdraw.html'">Withdraw</button>
+</div>
+
+<div class="main-content">
+    <div class="rocket-container">
+        <div class="cloud cloud1" id="cloud1"></div>
+        <div class="cloud cloud2" id="cloud2"></div>
+        <div class="cloud cloud3" id="cloud3"></div>
+        <img src="rocket.png" alt="Rocket Miner" class="rocket-image" id="rocket"> 
+    </div>
+
+    <div class="status-container">
+        <div class="status-item">
+            <img src="shield.png" alt="Shield" class="status-icon" style="background: none; width: 40px; height: 40px;"> 
+            <div class="status-value" id="shield-value">0%</div> 
+            <button class="refill-btn" id="shield-btn" onclick="getShield()">Get Shield</button>
+        </div>
+
+        <div class="status-item">
+            <img src="fuel.png" alt="Fuel" class="status-icon" style="background: none; width: 40px; height: 40px;">
+            <div class="status-value" id="fuel-value">0%</div> 
+            <button class="refill-btn" id="fuel-btn" onclick="refuel()">Refuel</button>
+        </div>
+    </div>
+    <button class="main-btn" id="launch-btn" onclick="launchMiner()">launch rocket miner</button>
+</div>
+
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, get, child, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// === FIREBASE KONFIGURATSIYASI ===
+const firebaseConfig = {
+  apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
+  authDomain: "user1111-c84a0.firebaseapp.com",
+  databaseURL: "https://user1111-c84a0-default-rtdb.firebaseio.com",
+  projectId: "user1111-c84a0",
+  storageBucket: "user1111-c84a0.firebaseapp.com",
+  messagingSenderId: "901723757936",
+  appId: "1:901723757936:web:9da0a1c7ec494f4a0c03b5",
+  measurementId: "G-9R8ZQY63B1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db);
+
+let deviceId = localStorage.getItem("deviceId");
+if(!deviceId){
+    deviceId = "user_"+Math.random().toString(36).substr(2,9);
+    localStorage.setItem("deviceId", deviceId);
+}
+
+let balance = 0.00;
+let fuel = 0; 
+let shield = 0;
+
+const fuelValueEl = document.getElementById("fuel-value");
+const shieldValueEl = document.getElementById("shield-value");
+const fuelBtn = document.getElementById("fuel-btn");
+const shieldBtn = document.getElementById("shield-btn");
+
+const adBtn = document.getElementById("launch-btn");
+const rocketImg = document.getElementById("rocket");
+const clouds = [document.getElementById("cloud1"), document.getElementById("cloud2"), document.getElementById("cloud3")]; 
+let remainingTime = 0;
+const TIMER_SECONDS = 300; // 5 daqiqa
+const MINING_REWARD = 0.05;
+const REWARD_PER_SECOND = MINING_REWARD / TIMER_SECONDS; 
+const DECREMENT_RATE = 100 / TIMER_SECONDS; 
+
+let AdController = null; 
+let miningInterval = null; 
+
+// === ADSGRAM/ADSONAR Funksiyalari (Refuel va Shield uchun) ===
+
+function onRefillComplete(resource) {
+    if (resource === 'fuel') {
+        fuel = 100;
+        alert("Yoqilg'i muvaffaqiyatli to'ldirildi (100%)!");
+    } else if (resource === 'shield') {
+        shield = 100;
+        alert("Qalqon muvaffaqiyatli tiklandi (100%)!");
+    }
+    updateStatus();
+    // Reklama tugagandan so'ng darhol Firebase'ga yozish
+    update(ref(db, "users/" + deviceId), { fuel: fuel, shield: shield });
+}
+
+function showRefillAd(resource) {
+    // Agar allaqachon 100% bo'lsa, reklamani ko'rsatmaslik
+    if ((resource === 'fuel' && Math.floor(fuel) > 0) || (resource === 'shield' && Math.floor(shield) > 0)) {
+        alert(resource === 'fuel' ? "Yoqilg'i mavjud. Faqat 0% bo'lganda to'ldirish mumkin." : "Qalqon mavjud. Faqat 0% bo'lganda to'ldirish mumkin.");
+        return;
+    }
+
+    if (window.Adsgram && AdController) {
+        AdController.show().then(() => {
+            onRefillComplete(resource);
+        }).catch(err => { 
+            console.log(err); 
+            alert(`Reklama yuklanmadi. Iltimos, qayta urinib ko'ring.`);
+        });
+    } else {
+        alert("AdsGram tizimi yuklanmagan. Iltimos, mini app'ni qayta ishga tushiring.");
+    }
+}
+
+window.refuel = function() {
+    showRefillAd('fuel');
+};
+
+window.getShield = function() {
+    showRefillAd('shield');
+};
+// =============================================================
+
+// === LAUNCH MINER LOGIKASI ===
+window.launchMiner = function() {
+    if (remainingTime > 0) return; 
+    
+    // 1. Foizlarni tekshirish - Faqat aniq 100% bo'lgandagina ishga tushirilsin
+    // FOIZLARNI YAXLITLAB TEKSHIRISHNI OLIB TASHLAYMIZ, chunki float qiymatlar saqlanishi mumkin
+    if (fuel < 100 || shield < 100) {
+        let missing = [];
+        if (fuel < 100) missing.push("Yoqilg'i (Fuel)");
+        if (shield < 100) missing.push("Qalqon (Shield)");
+
+        alert(`Raketani uchirish uchun ${missing.join(" va ")} 100% bo'lishi kerak. Iltimos, reklamani ko'rib to'ldiring.`);
+        return;
+    }
+    
+    // 2. Taymerni boshlash
+    remainingTime = TIMER_SECONDS;
+    startTimer();
+
+    // 3. Ma'lumotlarni saqlash (Taymer boshlanganda)
+    let lastLaunchTime = Date.now();
+    update(ref(db, "users/" + deviceId), { 
+        lastLaunchTime: lastLaunchTime, 
+        isMining: true 
+    });
+};
+// =============================================================
+
+function initializeAdsgram() {
+    if (window.Adsgram && !AdController) {
+        AdController = window.Adsgram.init({blockId:"int-18409"});
+        console.log("Adsgram muvaffaqiyatli ishga tushirildi.");
+    } else {
+        console.log("Adsgram yoki Telegram Web App kutilmoqda...");
+    }
+}
+
+// Sahifa yuklanganda tekshirish
+if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+    initializeAdsgram();
+} else {
+    console.log("Mini App muhiti topilmadi. Qo'lda ishga tushirish kutilmoqda.");
+    window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.ready && window.Telegram.WebApp.ready();
+    setTimeout(initializeAdsgram, 1000); 
+}
+
+
+// === FOIZLARNI VA TUGMALARNI YANGILASH FUNKSIYASI ===
+function updateStatus() {
+    // Faqat butun sonni ko'rsatish
+    fuelValueEl.innerText = `${Math.floor(fuel)}%`;
+    shieldValueEl.innerText = `${Math.floor(shield)}%`;
+    
+    // Tugmalarni yashirish/ko'rsatish mantig'i: Faqat 0% bo'lganda ko'rinadi
+    
+    // YASHIRISH MANTIQI
+    // Ehtiyot: float qiymat bo'lishi mumkin. 0.001 ham 0% deb ko'rinadi, lekin to'ldirishga ruxsat bermaslik kerak.
+    if (fuel > 0) {
+        fuelBtn.classList.add("hidden");
+    } else {
+        fuelBtn.classList.remove("hidden");
+    }
+
+    if (shield > 0) {
+        shieldBtn.classList.add("hidden");
+    } else {
+        shieldBtn.classList.remove("hidden");
+    }
+}
+// =======================================================
+
+// === FIREBASE'dan FOIZLARNI Yuklash va Balansni tekshirish (Optimallashtirilgan) ===
+get(child(dbRef, "users/"+deviceId)).then(snapshot=>{
+    if(snapshot.exists()){
+        const data = snapshot.val();
+        
+        // FOIZLAR VA BALANSNI YUKLASH
+        if(data.balance !== undefined) balance = data.balance;
+        if(data.fuel !== undefined) fuel = data.fuel;
+        if(data.shield !== undefined) shield = data.shield;
+        
+        document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+        updateStatus();
+        
+        // Agar mining jarayoni tugallanmagan bo'lsa, davom ettirish
+        if(data.isMining && data.lastLaunchTime){
+            const now = Date.now();
+            const timeSinceLastLaunch = Math.floor((now - data.lastLaunchTime) / 1000); // Sekunddagi farq
+            
+            // Eng ko'p qancha vaqt davomida mining davom etgan bo'lishi mumkinligini hisoblaymiz
+            const maxDurationByFuel = fuel / DECREMENT_RATE;
+            const maxDurationByShield = shield / DECREMENT_RATE;
+            
+            // Ilovaga kirguncha o'tgan haqiqiy mining vaqti:
+            // Bu vaqt o'tgan vaqt (timeSinceLastLaunch) va qolgan resurslar tugagunicha bo'lgan vaqtning minimumidir.
+            const effectiveMiningTime = Math.min(timeSinceLastLaunch, maxDurationByFuel, maxDurationByShield);
+            
+            // Balans va foizlarni hisoblash
+            if (effectiveMiningTime > 0) {
+                const earnedReward = effectiveMiningTime * REWARD_PER_SECOND;
+                balance += earnedReward;
+                
+                const decrementAmount = effectiveMiningTime * DECREMENT_RATE;
+                fuel = Math.max(0, fuel - decrementAmount);
+                shield = Math.max(0, shield - decrementAmount);
+            }
+            
+            // Qolgan vaqtni hisoblash: Umumiy 300 soniyadan qancha vaqt o'tganini hisoblash
+            // Buni `lastLaunchTime` ni emas, balki `isMining: true` bo'lgan **eng boshlang'ich vaqt** yordamida hisoblash kerak.
+            // Lekin sizning kodingizda `lastLaunchTime` har soniyada yangilanganligi sababli, boshlang'ich vaqtni saqlash qiyin.
+            // Shuning uchun, qolgan vaqtni resurslarga qarab aniqlaymiz:
+            
+            // 5 daqiqa (300s) = 100% resurs tugashi
+            // Qolgan % * 3 sekund/foiz = Qolgan vaqt
+            
+            // Resurslarning eng kichik qolgan foiziga qarab qolgan vaqtni aniqlaymiz.
+            const lowestResourcePercent = Math.min(fuel, shield);
+            // Qolgan vaqt (sekundlarda):
+            remainingTime = Math.max(0, Math.floor(lowestResourcePercent / DECREMENT_RATE)); 
+            
+            // Agar resurslar tugagan bo'lsa (yoki qolgan vaqt 0 bo'lsa)
+            if (remainingTime <= 0) {
+                // Miningni to'xtatish va Firebase'ga yakuniy holatni yozish
+                fuel = 0;
+                shield = 0;
+                update(ref(db, "users/" + deviceId), { balance: balance, fuel: 0, shield: 0, isMining: false });
+                console.log("Resurslar tugadi. Mining to'xtatildi.");
+                stopMining();
+            } else {
+                // Miningni davom ettirish
+                
+                // Balans va foizlarni yangilash
+                document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+                updateStatus();
+                
+                // lastLaunchTime'ni faqat taymer boshlanganda yangilaymiz (startTimer ichida)
+                // Bu yerda yangilash shart emas, chunki hisob-kitoblar allaqachon qilingan
+                
+                startTimer(); // Taymerni qolgan vaqtdan davom ettirish
+                console.log(`Davom etish: Effective Mining Time: ${effectiveMiningTime}s. Qolgan vaqt: ${remainingTime}s.`);
+            }
+            
+            // Yuqoridagi hisob-kitoblardan so'ng, Firebase'ga ma'lumotlarni yozish
+            update(ref(db, "users/" + deviceId), { 
+                balance: balance, 
+                fuel: fuel, 
+                shield: shield,
+                isMining: remainingTime > 0 // Agar qolgan vaqt bo'lsa, isMining true qoladi
+            });
+
+
+        }
+    } else {
+        // Yangi foydalanuvchi bo'lsa, 0% bilan saqlash
+        update(ref(db, "users/" + deviceId), { fuel: 0, shield: 0, balance: 0.00, isMining: false });
+        // Yangi foydalanuvchi uchun balans va foizlarni ekranda ko'rsatish
+        document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+        updateStatus();
+    }
+});
+
+// === ANIMATSIYA VA TAYMER KODI ===
+
+function toggleCloudVisibility(shouldShow) {
+    clouds.forEach(cloud => {
+        cloud.style.display = shouldShow ? 'block' : 'none';
+    });
+}
+
+function toggleRocketAnimation(shouldAnimate) {
+    if (shouldAnimate) {
+        rocketImg.classList.remove("animating"); 
+        rocketImg.classList.add("animating"); 
+        toggleCloudVisibility(true); 
+    } else {
+        rocketImg.classList.remove("animating");
+        toggleCloudVisibility(false); 
+    }
+}
+
+function stopMining() {
+    clearInterval(miningInterval);
+    adBtn.disabled = false;
+    adBtn.innerText = "launch rocket miner";
+    toggleRocketAnimation(false);
+    
+    // Mining tugagani haqida Firebase'ga xabar berish
+    // Bu update foydalanuvchi chiqib ketganda ham to'g'ri ishlashi uchun zarur.
+    // get() ichida ham bor, lekin xavfsizlik uchun bu yerda qoldiramiz.
+    update(ref(db, "users/" + deviceId), { isMining: false });
+}
+
+function startTimer(){
+    if (miningInterval) clearInterval(miningInterval); 
+    
+    adBtn.disabled = true;
+    toggleRocketAnimation(true); 
+    
+    // Taymer boshlanganda lastLaunchTime ni hozirgi vaqtga o'rnatish
+    // Bu keyingi kirishda hisob-kitob qilish uchun zarur
+    update(ref(db, "users/" + deviceId), { 
+        lastLaunchTime: Date.now(),
+        isMining: true 
+    });
+
+    miningInterval = setInterval(()=>{
+        // 1. Tugmadagi vaqtni yangilash
+        let m=Math.floor(remainingTime/60);
+        let s=remainingTime%60;
+        adBtn.innerText=`${m}:${s<10?"0"+s:s}`;
+        
+        if(remainingTime > 0){
+            // 2. Balans va foizlarni yangilash (Har soniyada)
+            balance += REWARD_PER_SECOND;
+            document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+            
+            // Foizlarni kamaytirish
+            fuel = Math.max(0, fuel - DECREMENT_RATE);
+            shield = Math.max(0, shield - DECREMENT_RATE);
+            updateStatus();
+            
+            // 3. Agar resurslar 0% ga tushib qolgan bo'lsa, darhol to'xtatish
+            if (fuel <= 0 || shield <= 0) {
+                 stopMining();
+                 fuel = 0;
+                 shield = 0;
+                 updateStatus();
+                 remainingTime = 0;
+                 // Resurs tugaganligi sababli, isMining: false holatini saqlash
+                 update(ref(db, "users/" + deviceId), { isMining: false, fuel: 0, shield: 0, balance: balance });
+                 return;
+            }
+            
+            // 4. Firebase'da ma'lumotlarni saqlash (Har soniyada)
+            // lastLaunchTime: Date.now() har soniyada yangilanadi, bu ilovadan chiqib kirganda qolgan vaqtni to'g'ri hisoblashga yordam beradi.
+            update(ref(db, "users/" + deviceId), { 
+                balance: balance, 
+                fuel: fuel, 
+                shield: shield,
+                lastLaunchTime: Date.now() 
+            });
+        }
+        
+        if(remainingTime<=0){
+            stopMining();
+            fuel = 0;
+            shield = 0;
+            updateStatus();
+            // Taymer tugaganda ham yakuniy holatni saqlash
+            update(ref(db, "users/" + deviceId), { isMining: false, fuel: 0, shield: 0, balance: balance });
+        }
+        remainingTime--;
+    },10
