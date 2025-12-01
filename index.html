@@ -53,7 +53,7 @@
         color: #000;
     }
     
-    /* === Tugmalar Konteyneri: Withdraw va Tasks tugmalarini ushlab turadi === */
+    /* === Tugmalar Konteyneri: Withdraw, Tasks va Referral tugmalarini ushlab turadi === */
     .button-group {
         display: flex;
         flex-direction: column; /* Ustun bo'ylab joylashtirish */
@@ -73,7 +73,7 @@
         transition: background 0.3s;
     }
     
-    /* === YANGI: Tasks Tugmasi Stili === */
+    /* === Tasks Tugmasi Stili === */
     .tasks-btn {
         padding: 8px 15px;
         background: #ffaa00; /* Sariq/To'q sariq rang */
@@ -85,6 +85,20 @@
         cursor: pointer;
         transition: background 0.3s;
     }
+    
+    /* === YANGI: Referral Tugmasi Stili === */
+    .referral-btn {
+        padding: 8px 15px;
+        background: #8A2BE2; /* Binafsha rang */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        box-shadow: 0 2px 5px rgba(138, 43, 226, 0.4);
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
 
     /* === Raketa Animatsiyasi Stili === */
     .main-content {
@@ -234,6 +248,7 @@
     <div class="button-group">
         <button class="withdraw-btn" onclick="location.href='withdraw.html'">Withdraw</button>
         <button class="tasks-btn" onclick="location.href='task.html'">Tasks</button>
+        <button class="referral-btn" onclick="location.href='referal.html'">Referral</button>
     </div>
     </div>
 
@@ -310,6 +325,7 @@ const DECREMENT_RATE = 100 / TIMER_SECONDS;
 
 let AdController = null; 
 let miningInterval = null; 
+let referrerId = null; // YANGI: Referrer ID ni global qilish
 
 // === ADSGRAM/ADSONAR Funksiyalari (Refuel va Shield uchun) ===
 
@@ -399,6 +415,15 @@ function initializeAdsgram() {
 function initApp() {
     // 1. Adsgramni ishga tushirishga urinish
     initializeAdsgram();
+    
+    // REFERRAL MANTIQI: Telegram TWA dan start_param ni olish va uni global qilish
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
+        const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+        if (startParam && startParam !== deviceId) {
+            referrerId = startParam; 
+            console.log("Referrer ID topildi:", referrerId);
+        }
+    }
 
     // 2. Firebase'dan ma'lumotlarni yuklash va davom ettirish mantiqi
     get(child(dbRef, "users/"+deviceId)).then(snapshot=>{
@@ -409,6 +434,9 @@ function initApp() {
             if(data.balance !== undefined) balance = data.balance;
             if(data.fuel !== undefined) fuel = data.fuel;
             if(data.shield !== undefined) shield = data.shield;
+            
+            // Agar foydalanuvchining referrerId ma'lumoti mavjud bo'lsa, uni ham saqlash
+            if(data.referrerId !== undefined) referrerId = data.referrerId;
             
             document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
             updateStatus();
@@ -434,6 +462,26 @@ function initApp() {
                     const decrementAmount = effectiveMiningTime * DECREMENT_RATE;
                     fuel = Math.max(0, fuel - decrementAmount);
                     shield = Math.max(0, shield - decrementAmount);
+
+                    // REFERRAL BONUSINI BIR YO'LIGA HISOBLASH (Siz yo'qligingizda ishlangan pul)
+                    if (data.referrerId) {
+                         const totalReferrerBonus = effectiveMiningTime * REWARD_PER_SECOND * 0.02; // 2%
+                         
+                         // REFERRER balansini faqat shu yerda, foydalanuvchi appni ochganda yangilaymiz.
+                         get(child(dbRef, "users/" + data.referrerId)).then(refSnapshot => {
+                             if (refSnapshot.exists()) {
+                                 const refData = refSnapshot.val();
+                                 const newRefBalance = (refData.balance || 0) + totalReferrerBonus;
+                                 const newRefBonus = (refData.referral_bonus || 0) + totalReferrerBonus;
+                                 
+                                 update(ref(db, "users/" + data.referrerId), { 
+                                     balance: newRefBalance,
+                                     referral_bonus: newRefBonus
+                                 });
+                             }
+                         });
+                    }
+                    
                 }
                 
                 // Qolgan vaqtni resurslarning eng past foiziga qarab hisoblash
@@ -473,7 +521,14 @@ function initApp() {
             }
         } else {
             // Yangi foydalanuvchi bo'lsa, 0% bilan saqlash
-            update(ref(db, "users/" + deviceId), { fuel: 0, shield: 0, balance: 0.00, isMining: false });
+            const newUser_data = { fuel: 0, shield: 0, balance: 0.00, isMining: false };
+            
+            if (referrerId) {
+                 newUser_data.referrerId = referrerId;
+            }
+            
+            update(ref(db, "users/" + deviceId), newUser_data);
+            
             // Yangi foydalanuvchi uchun balans va foizlarni ekranda ko'rsatish
             document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
             updateStatus();
@@ -558,9 +613,34 @@ function startTimer(){
         
         if(remainingTime > 0){
             // 2. Balans va foizlarni yangilash (Har soniyada)
-            balance += REWARD_PER_SECOND;
+            const earnedThisSecond = REWARD_PER_SECOND; // Har soniyada olinadigan asosiy foyda
+            balance += earnedThisSecond;
             document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
             
+            // === REFERRAL BONUS MANTIQI (Har soniyada) ===
+            if (referrerId) { 
+                const referrerBonus = earnedThisSecond * 0.02; // 2% bonus
+                
+                // Taklifchining balansini Firebase'da yangilash (qo'shimcha funksiya orqali)
+                // Ma'lumotlar bazasini bir vaqtning o'zida bir nechta joydan yangilash uchun "Transaction" dan foydalanish tavsiya etiladi.
+                // Lekin soddalik uchun get/update ishlatamiz.
+                get(child(dbRef, "users/" + referrerId)).then(snapshot => {
+                    if (snapshot.exists()) {
+                        const refData = snapshot.val();
+                        const newRefBalance = (refData.balance || 0) + referrerBonus;
+                        const newRefBonus = (refData.referral_bonus || 0) + referrerBonus;
+                        
+                        update(ref(db, "users/" + referrerId), { 
+                            balance: newRefBalance,
+                            referral_bonus: newRefBonus
+                        });
+                    }
+                }).catch(error => {
+                    console.error("Referrer balansini yangilashda xatolik:", error);
+                });
+            }
+            // ===================================
+
             // Foizlarni kamaytirish
             fuel = Math.max(0, fuel - DECREMENT_RATE);
             shield = Math.max(0, shield - DECREMENT_RATE);
@@ -597,7 +677,7 @@ function startTimer(){
             update(ref(db, "users/" + deviceId), { isMining: false, fuel: 0, shield: 0, balance: balance });
         }
         remainingTime--;
-    },1000); // !!! Xato joyi: bu yer 1000 bo'lishi kerak edi.
+    },1000); 
 }
 </script>
 

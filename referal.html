@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width-device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>Referral - Rocket Mining</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #8A2BE2, #6A5ACD); /* Binafsha gradient */
+            padding: 10px;
+            margin: 0;
+            min-height: 100vh;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 450px;
+            margin: 10px auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h2 {
+            color: #fff;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Statistik ko'rsatkichlar */
+        .stats-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px 10px;
+            flex-grow: 1;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700; /* Oltin rang */
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #E0E0E0;
+        }
+
+
+        .referral-link-box {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .link-label {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        #referral-link {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            word-wrap: break-word; 
+        }
+
+        .copy-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: linear-gradient(45deg, #007bff, #00a2ff);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .referral-list-title {
+            margin-top: 10px;
+            color: #fff;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .referral-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            max-height: 250px; /* Ro'yxatni chegaralash */
+            overflow-y: auto;
+        }
+
+        .referral-item {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+
+        .referral-item span.status {
+            font-weight: bold;
+            color: #00c16e;
+        }
+        
+        .no-referrals {
+            color: #E0E0E0;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🤝 Referral Markazi</h2>
+    
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-value" id="referral-count">0</div>
+            <div class="stat-label">Taklif qilinganlar</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="referral-bonus">0.00 ₽</div>
+            <div class="stat-label">Umumiy daromad (2%)</div>
+        </div>
+    </div>
+
+    <div class="referral-link-box">
+        <div class="link-label">Sizning shaxsiy havolangiz:</div>
+        <div id="referral-link">Yuklanmoqda...</div>
+        <button class="copy-btn" onclick="copyLink()">Havolani nusxalash</button>
+    </div>
+
+    <div class="referral-list-title">👥 Do'stlar Ro'yxati</div>
+    <ul class="referral-list" id="referral-list">
+        <li class="no-referrals">Yuklanmoqda...</li>
+    </ul>
+</div>
+
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, get, child, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// === FIREBASE KONFIGURATSIYASI (index.html dan olindi) ===
+const firebaseConfig = {
+  apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
+  authDomain: "user1111-c84a0.firebaseapp.com",
+  databaseURL: "https://user1111-c84a0-default-rtdb.firebaseio.com",
+  projectId: "user1111-c84a0",
+  storageBucket: "user1111-c84a0.firebaseapp.com",
+  messagingSenderId: "901723757936",
+  appId: "1:901723757936:web:9da0a1c7ec494f4a0c03b5",
+  measurementId: "G-9R8ZQY63B1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db);
+
+let deviceId = localStorage.getItem("deviceId");
+if(!deviceId){
+    deviceId = "user_"+Math.random().toString(36).substr(2,9);
+    localStorage.setItem("deviceId", deviceId);
+}
+
+// Telegram Web App URL olish mantiqi
+let botUsername = "rocket_mining_bot"; // !!! BOTINGIZNING USERNAME'INI KIRITING !!!
+const referralLinkEl = document.getElementById("referral-link");
+
+if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.start_param) {
+    // Agar TWA orqali ishlayotgan bo'lsa, havolani Telegram URL formatida yaratamiz
+    const referralLink = `https://t.me/${botUsername}?start=${deviceId}`;
+    referralLinkEl.innerText = referralLink;
+} else {
+    // Agar oddiy brauzerda ishlayotgan bo'lsa, eslatma berish
+    referralLinkEl.innerText = "Telegram mini-app'dan foydalaning";
+    referralLinkEl.style.color = "red";
+    // Bu yerga dummy link qo'yish mumkin
+    // referralLinkEl.innerText = `https://t.me/${botUsername}?start=${deviceId}`;
+}
+
+
+// Havolani nusxalash funksiyasi
+window.copyLink = function() {
+    const linkText = referralLinkEl.innerText;
+    
+    if (window.Telegram && window.Telegram.WebApp) {
+        navigator.clipboard.writeText(linkText).then(() => {
+            Telegram.WebApp.showAlert('Havola nusxalandi!');
+        }).catch(err => {
+            Telegram.WebApp.showAlert('Nusxalash xatolik bilan yakunlandi.');
+        });
+    } else {
+        navigator.clipboard.writeText(linkText).then(() => {
+            alert('Havola nusxalandi!');
+        }).catch(err => {
+            alert('Nusxalashda xatolik.');
+        });
+    }
+}
+
+// Taklif qilingan do'stlarni yuklash
+async function loadReferrals() {
+    const referralListEl = document.getElementById("referral-list");
+    referralListEl.innerHTML = '<li class="no-referrals">Ma\'lumotlar yuklanmoqda...</li>';
+    
+    // 1. Foydalanuvchi ma'lumotlarini yuklash (bonusni ko'rsatish uchun)
+    try {
+        const userSnapshot = await get(child(dbRef, "users/" + deviceId));
+        if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            const totalBonus = userData.referral_bonus || 0;
+            document.getElementById("referral-bonus").innerText = `${totalBonus.toFixed(2)} ₽`;
+        } else {
+            document.getElementById("referral-bonus").innerText = `0.00 ₽`;
+        }
+    } catch (error) {
+        console.error("Bonus yuklanishida xatolik:", error);
+    }
+    
+    // 2. Taklif qilingan do'stlar ro'yxatini topish
+    try {
+        const referralsQuery = query(ref(db, "users"), orderByChild("referrerId"), equalTo(deviceId));
+        const snapshot = await get(referralsQuery);
+        
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            const referralKeys = Object.keys(users);
+            
+            document.getElementById("referral-count").innerText = referralKeys.length; // Sanash
+            referralListEl.innerHTML = ''; 
+
+            referralKeys.forEach((key, index) => {
+                const user = users[key];
+                const li = document.createElement('li');
+                li.className = 'referral-item';
+                
+                const friendNum = index + 1;
+                const status = user.isMining ? 'Miningda' : 'Qo\'shildi'; 
+
+                li.innerHTML = `
+                    <span>👤 Do'st #${friendNum}</span>
+                    <span class="status">${status}</span>
+                `;
+                referralListEl.appendChild(li);
+            });
+
+        } else {
+            document.getElementById("referral-count").innerText = 0;
+            referralListEl.innerHTML = '<li class="no-referrals">Hali taklif qilingan do\'stlaringiz yo\'q.</li>';
+        }
+    } catch (error) {
+        console.error("Referallar yuklanishida xatolik:", error);
+        referralListEl.innerHTML = '<li class="no-referrals" style="color: red;">Do\'stlar ro\'yxatini yuklashda xatolik.</li>';
+    }
+}
+
+window.onload = loadReferrals;
+</script>
+
+</body>
+</html>
