@@ -53,7 +53,14 @@
         color: #000;
     }
     
-    /* === Withdraw Tugmasi joylashuvi === */
+    /* === Tugmalar Konteyneri: Withdraw va Tasks tugmalarini ushlab turadi === */
+    .button-group {
+        display: flex;
+        flex-direction: column; /* Ustun bo'ylab joylashtirish */
+        gap: 5px; /* Tugmalar orasidagi bo'shliq */
+    }
+
+    /* === Withdraw Tugmasi Stili === */
     .withdraw-btn {
         padding: 8px 15px;
         background: #00c16e;
@@ -62,6 +69,19 @@
         border-radius: 8px;
         font-size: 14px;
         box-shadow: 0 2px 5px rgba(0,200,120,0.4);
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    
+    /* === YANGI: Tasks Tugmasi Stili === */
+    .tasks-btn {
+        padding: 8px 15px;
+        background: #ffaa00; /* Sariq/To'q sariq rang */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        box-shadow: 0 2px 5px rgba(255,170,0,0.4);
         cursor: pointer;
         transition: background 0.3s;
     }
@@ -147,7 +167,7 @@
         cursor: pointer;
     }
 
-    /* === YANGI: Status Bloklari Stili === */
+    /* === Status Bloklari Stili === */
     .status-container {
         display: flex;
         justify-content: space-around;
@@ -211,8 +231,11 @@
         <div class="balance-value" id="balance">0.00 ₽</div>
     </div>
     
-    <button class="withdraw-btn" onclick="location.href='withdraw.html'">Withdraw</button>
-</div>
+    <div class="button-group">
+        <button class="withdraw-btn" onclick="location.href='withdraw.html'">Withdraw</button>
+        <button class="tasks-btn" onclick="location.href='task.html'">Tasks</button>
+    </div>
+    </div>
 
 <div class="main-content">
     <div class="rocket-container">

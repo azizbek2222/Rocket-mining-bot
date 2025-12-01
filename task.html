@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>Tasks - Rocket Mining</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #4e9fff, #6ac9ff);
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        h2 {
+            color: #007bff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 5px;
+        }
+
+        .task-details {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .task-details span {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .task-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(45deg, #28a745, #00c16e);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+        
+        .task-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .task-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .task-timer {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff5722;
+            margin-top: 10px;
+        }
+        
+        .task-link {
+            display: block;
+            margin-top: 10px;
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 Available Tasks</h2>
+    <ul class="task-list" id="task-list">
+        <li style="text-align: center; color: #666;">Loading tasks...</li>
+    </ul>
+    <p id="no-tasks" style="text-align: center; display: none; color: #666;">No tasks available right now. Check back later!</p>
+</div>
+
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, get, child, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// === FIREBASE KONFIGURATSIYASI (OLDINGI SAHIFADAN OLINDI) ===
+const firebaseConfig = {
+  apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
+  authDomain: "user1111-c84a0.firebaseapp.com",
+  databaseURL: "https://user1111-c84a0-default-rtdb.firebaseio.com",
+  projectId: "user1111-c84a0",
+  storageBucket: "user1111-c84a0.firebaseapp.com",
+  messagingSenderId: "901723757936",
+  appId: "1:901723757936:web:9da0a1c7ec494f4a0c03b5",
+  measurementId: "G-9R8ZQY63B1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db);
+
+let deviceId = localStorage.getItem("deviceId");
+if(!deviceId){
+    deviceId = "user_"+Math.random().toString(36).substr(2,9);
+    localStorage.setItem("deviceId", deviceId);
+}
+
+const taskListEl = document.getElementById("task-list");
+const noTasksEl = document.getElementById("no-tasks");
+
+// Foydalanuvchi ma'lumotlarini (balansini) yuklash
+async function getUserBalance() {
+    try {
+        const snapshot = await get(child(dbRef, "users/" + deviceId));
+        if (snapshot.exists() && snapshot.val().balance !== undefined) {
+            return snapshot.val().balance;
+        }
+    } catch (error) {
+        console.error("Error fetching balance:", error);
+    }
+    return 0.00;
+}
+
+// Vazifalarni Firebase'dan yuklash
+async function loadTasks() {
+    taskListEl.innerHTML = '<li style="text-align: center; color: #666;">Loading tasks...</li>';
+    noTasksEl.style.display = 'none';
+    
+    try {
+        const snapshot = await get(child(dbRef, "tasks"));
+        if (snapshot.exists()) {
+            const tasks = snapshot.val();
+            const taskKeys = Object.keys(tasks);
+            
+            if (taskKeys.length === 0) {
+                taskListEl.innerHTML = '';
+                noTasksEl.style.display = 'block';
+                return;
+            }
+            
+            taskListEl.innerHTML = ''; 
+            taskKeys.forEach(key => {
+                const task = tasks[key];
+                displayTask(key, task);
+            });
+
+        } else {
+            taskListEl.innerHTML = '';
+            noTasksEl.style.display = 'block';
+        }
+    } catch (error) {
+        console.error("Error loading tasks:", error);
+        taskListEl.innerHTML = '<li style="text-align: center; color: #ff5722;">Error loading tasks.</li>';
+    }
+}
+
+// Har bir vazifani HTMLda ko'rsatish
+function displayTask(taskId, task) {
+    const li = document.createElement('li');
+    li.className = 'task-item';
+    li.id = `task-${taskId}`;
+    
+    li.innerHTML = `
+        <div class="task-title">${task.name}</div>
+        <div class="task-details">Reward: <span>${task.reward} ₽</span></div>
+        <div class="task-details">Wait Time: <span>${task.wait_time} seconds</span></div>
+        <button class="task-btn" data-task-id="${taskId}" onclick="startTask('${taskId}', ${task.wait_time}, ${task.reward})">Start Task</button>
+        ${task.url ? `<a href="${task.url}" target="_blank" class="task-link">Open Link</a>` : ''}
+    `;
+    taskListEl.appendChild(li);
+}
+
+// Vazifani boshlash mantiqi
+window.startTask = function(taskId, waitTime, reward) {
+    const taskItem = document.getElementById(`task-${taskId}`);
+    const startBtn = taskItem.querySelector('.task-btn');
+    const existingTimer = taskItem.querySelector('.task-timer');
+    if(existingTimer) existingTimer.remove(); // Oldingi taymerni o'chirish
+
+    startBtn.disabled = true;
+    startBtn.innerText = "Task in Progress...";
+
+    let remainingTime = waitTime;
+    
+    const timerEl = document.createElement('div');
+    timerEl.className = 'task-timer';
+    taskItem.appendChild(timerEl);
+    
+    timerEl.innerText = `Confirm in: ${remainingTime}s`;
+
+    const interval = setInterval(() => {
+        remainingTime--;
+        timerEl.innerText = `Confirm in: ${remainingTime}s`;
+
+        if (remainingTime <= 0) {
+            clearInterval(interval);
+            timerEl.remove();
+            
+            // Tasdiqlash tugmasini ko'rsatish
+            startBtn.innerText = "Confirm Task Completion";
+            startBtn.disabled = false;
+            startBtn.onclick = () => confirmTask(taskId, reward);
+        }
+    }, 1000);
+};
+
+// Vazifani tasdiqlash va balansni yangilash
+async function confirmTask(taskId, reward) {
+    const taskItem = document.getElementById(`task-${taskId}`);
+    const confirmBtn = taskItem.querySelector('.task-btn');
+
+    confirmBtn.disabled = true;
+    confirmBtn.innerText = "Processing...";
+
+    // Balansni yangilash
+    let currentBalance = await getUserBalance();
+    const newBalance = currentBalance + reward;
+    
+    try {
+        await update(ref(db, "users/" + deviceId), { 
+            balance: newBalance 
+        });
+        
+        // Vazifani bajarilgan deb belgilash (Admin Panelida ko'rsatish uchun)
+        // Ammo foydalanuvchi sahifasida oddiygina tugmani o'zgartirish
+        
+        confirmBtn.innerText = `+${reward.toFixed(2)} ₽ Added!`;
+        confirmBtn.style.background = '#28a745';
+        
+        alert(`Task "${taskId}" completed! ${reward.toFixed(2)} ₽ added to your balance.`);
+
+    } catch (error) {
+        console.error("Error confirming task and updating balance:", error);
+        confirmBtn.innerText = "Error. Try again.";
+        confirmBtn.disabled = false;
+    }
+}
+
+// Sahifa yuklanganda vazifalarni yuklash
+window.onload = loadTasks;
+</script>
+
+</body>
+</html>
