@@ -255,7 +255,7 @@
 <div class="top-bar">
     <div class="balance-box">
         <div class="balance-title">Balance</div>
-        <div class="balance-value" id="balance">0.00 ₽</div>
+        <div class="balance-value" id="balance">0 so'm</div>
     </div>
     
     <div class="button-group">
@@ -319,7 +319,7 @@ if(!deviceId){
     localStorage.setItem("deviceId", deviceId);
 }
 
-let balance = 0.00;
+let balance = 0;
 let fuel = 0; 
 let shield = 0;
 
@@ -333,7 +333,9 @@ const rocketImg = document.getElementById("rocket");
 const clouds = [document.getElementById("cloud1"), document.getElementById("cloud2"), document.getElementById("cloud3")]; 
 let remainingTime = 0;
 const TIMER_SECONDS = 300; // 5 daqiqa
-const MINING_REWARD = 0.05;
+// === O'ZGARTIRILGAN QATOR ===
+const MINING_REWARD = 5; // 5 so'm
+// =============================
 const REWARD_PER_SECOND = MINING_REWARD / TIMER_SECONDS; 
 const DECREMENT_RATE = 100 / TIMER_SECONDS; 
 
@@ -474,7 +476,9 @@ function initApp() {
             // Agar foydalanuvchining referrerId ma'lumoti mavjud bo'lsa, uni ham saqlash
             if(data.referrerId !== undefined) referrerId = data.referrerId;
             
-            document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+            // === O'ZGARTIRILGAN QATOR ===
+            document.getElementById("balance").innerText = balance.toFixed(2)+" so'm";
+            // =============================
             updateStatus();
             
             // Agar mining jarayoni tugallanmagan bo'lsa, davom ettirish
@@ -529,7 +533,9 @@ function initApp() {
                     // Miningni to'xtatish va Firebase'ga yakuniy holatni yozish
                     fuel = 0;
                     shield = 0;
-                    document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+                    // === O'ZGARTIRILGAN QATOR ===
+                    document.getElementById("balance").innerText = balance.toFixed(2)+" so'm";
+                    // =============================
                     updateStatus();
                     update(ref(db, "users/" + deviceId), { balance: balance, fuel: 0, shield: 0, isMining: false });
                     stopMining();
@@ -538,7 +544,9 @@ function initApp() {
                     // Miningni davom ettirish
                     
                     // Balans va foizlarni yangilash
-                    document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+                    // === O'ZGARTIRILGAN QATOR ===
+                    document.getElementById("balance").innerText = balance.toFixed(2)+" so'm";
+                    // =============================
                     updateStatus();
                     
                     startTimer(); // Taymerni qolgan vaqtdan davom ettirish
@@ -557,7 +565,7 @@ function initApp() {
             }
         } else {
             // Yangi foydalanuvchi bo'lsa, 0% bilan saqlash
-            const newUser_data = { fuel: 0, shield: 0, balance: 0.00, isMining: false };
+            const newUser_data = { fuel: 0, shield: 0, balance: 0, isMining: false };
             
             if (referrerId) {
                  newUser_data.referrerId = referrerId;
@@ -566,7 +574,9 @@ function initApp() {
             update(ref(db, "users/" + deviceId), newUser_data);
             
             // Yangi foydalanuvchi uchun balans va foizlarni ekranda ko'rsatish
-            document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+            // === O'ZGARTIRILGAN QATOR ===
+            document.getElementById("balance").innerText = balance.toFixed(2)+" so'm";
+            // =============================
             updateStatus();
         }
     });
@@ -622,7 +632,7 @@ function stopMining() {
     clearInterval(miningInterval);
     miningInterval = null;
     toggleRocketAnimation(false);
-    adBtn.innerText = "launch rocket miner";
+    adBtn.innerText = "raketa konchini uchirish";
     remainingTime = 0; 
 }
 
@@ -640,7 +650,9 @@ function updateMiningStatus() {
 
     // 1. Balansni hisoblash va yangilash
     balance += REWARD_PER_SECOND;
-    document.getElementById("balance").innerText = balance.toFixed(2)+" ₽";
+    // === O'ZGARTIRILGAN QATOR ===
+    document.getElementById("balance").innerText = balance.toFixed(2)+" so'm";
+    // =============================
     
     // 2. Foizlarni kamaytirish
     fuel -= DECREMENT_RATE;

@@ -48,7 +48,7 @@
     <div class="box-title">💸 Pulni yechib olish</div>
     <form id="withdrawForm">
         <input type="text" id="payeer" placeholder="uzcard yoki humo karta raqamingizni kiriting." required><br>
-        <input type="number" id="amount" placeholder="Miqdori (₽)" min="1" step="0.01" required><br>
+        <input type="number" id="amount" placeholder="Miqdori (so'm)" min="500" step="0.01" required><br>
         <button type="submit" class="submit-btn">So'rov yuboring</button>
     </form>
     <button class="back-btn" onclick="location.href='index.html'">Orqaga</button>
@@ -80,6 +80,9 @@
         alert("Foydalanuvchi identifikatori topilmadi. Iltimos, avval index.html ni oching.");
         window.location.href = "index.html";
     }
+    
+    // === MINIMAL YECHISH MIQDORI ===
+    const MIN_WITHDRAWAL = 500.00; 
 
     document.getElementById("withdrawForm").addEventListener("submit", function(e){
         e.preventDefault();
@@ -88,7 +91,14 @@
         const amount = parseFloat(document.getElementById("amount").value);
         
         if (payeer === "" || amount <= 0 || isNaN(amount)) {
-            alert("Please enter your Payeer number and the correct amount.");
+            alert("Iltimos, uzcard/humo karta raqamingizni va to'g'ri miqdorni kiriting.");
+            return;
+        }
+        
+        // === YANGI: Minimal miqdorni tekshirish ===
+        if (amount < MIN_WITHDRAWAL) {
+            // Xabarda valyuta o'zgartirildi: (so'm)
+            alert(`Minimal yechib olish miqdori ${MIN_WITHDRAWAL.toFixed(2)} so'm ni tashkil qiladi.`);
             return;
         }
 
@@ -99,7 +109,8 @@
                 const currentBalance = userData.balance || 0.00;
 
                 if (amount > currentBalance) {
-                    alert("Balansingizda mablag‘ yetarli emas. Sizning balansingiz: " + currentBalance.toFixed(2) + " ₽");
+                    // Xabarda valyuta o'zgartirildi: (so'm)
+                    alert("Balansingizda mablag‘ yetarli emas. Sizning balansingiz: " + currentBalance.toFixed(2) + " so'm");
                     return;
                 }
                 
@@ -117,9 +128,12 @@
                 .then(() => {
                     // Foydalanuvchi balansini yangilash (kamaytirish)
                     const newBalance = currentBalance - amount;
-                    set(ref(db, "users/"+deviceId), {...userData, balance: newBalance})
+                    // set() o'rniga update() dan foydalanish tavsiya etiladi, chunki set() boshqa maydonlarni o'chirib yuborishi mumkin.
+                    // Lekin sizning kodingizda spread operatori ishlatilgan, shuning uchun set() qoldirildi.
+                    set(ref(db, "users/"+deviceId), {...userData, balance: newBalance}) 
                     .then(() => {
-                        alert(`So'rov muvaffaqiyatli yuborildi: ${amount.toFixed(2)} ₽ Payeer ${payeer} raqamiga. Balansingiz yangilandi.`);
+                        // Xabarda valyuta o'zgartirildi: (so'm)
+                        alert(`So'rov muvaffaqiyatli yuborildi: ${amount.toFixed(2)} so'm Payeer ${payeer} raqamiga. Balansingiz yangilandi.`);
                         // Yuborilgandan so'ng maydonlarni tozalash
                         document.getElementById("payeer").value = "";
                         document.getElementById("amount").value = "";

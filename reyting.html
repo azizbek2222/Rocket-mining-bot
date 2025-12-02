@@ -172,9 +172,9 @@
     <div class="prize-info">
         <div style="font-weight: bold; margin-bottom: 5px;">Sovrinlar Fondi (Eng ko'p Launch Miner uchun)</div>
         <ul class="prize-list" id="prize-list">
-            <li class="prize-item">Top 1: 0 ₽</li>
-            <li class="prize-item">Top 2: 0 ₽</li>
-            <li class="prize-item">Top 3: 0 ₽</li>
+            <li class="prize-item">Top 1: 0 so'm</li>
+            <li class="prize-item">Top 2: 0 so'm</li>
+            <li class="prize-item">Top 3: 0 so'm</li>
             </ul>
     </div>
 
@@ -254,7 +254,8 @@ function renderPrizes(prizes) {
         const prizeAmount = prizes[key];
         const li = document.createElement('li');
         li.className = 'prize-item';
-        li.innerText = `Top ${index + 1}: ${prizeAmount} ₽`;
+        // ₽ o'rniga so'm ishlatildi
+        li.innerText = `Top ${index + 1}: ${prizeAmount} so'm`;
         listEl.appendChild(li);
     });
 }
