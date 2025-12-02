@@ -316,7 +316,7 @@
         <div class="status-item">
             <img src="shield.png" alt="Shield" class="status-icon" style="background: none; width: 40px; height: 40px;"> 
             <div class="status-value" id="shield-value">0%</div> 
-            <button class="refill-btn" id="shield-btn" onclick="getShield()">Shieldni oling</button>
+            <button class="refill-btn" id="shield-btn" onclick="getShield()">Qalqon oling</button>
         </div>
 
         <div class="status-item">
@@ -392,13 +392,18 @@ let referrerId = null;
 // === ADSGRAM/ADSONAR Funksiyalari (Refuel va Shield uchun) ===
 
 function onRefillComplete(resource) {
+    const refillAmount = 50; // Har safar 50% to'ldiriladi
+    
     if (resource === 'fuel') {
-        fuel = 100;
-        alert("Refueling successfully completed (100%)!");
+        // Yoqilg'ini faqat 100% gacha to'ldirish
+        fuel = Math.min(100, fuel + refillAmount);
+        alert(`Yoqilg'i muvaffaqiyatli to'ldirildi. Hozirgi holat: ${Math.floor(fuel)}%`);
     } else if (resource === 'shield') {
-        shield = 100;
-        alert("Shield successfully restored (100%)!");
+        // Qalqonni faqat 100% gacha to'ldirish
+        shield = Math.min(100, shield + refillAmount);
+        alert(`Qalqon muvaffaqiyatli tiklandi. Hozirgi holat: ${Math.floor(shield)}%`);
     }
+    
     updateStatus();
     // Reklama tugagandan so'ng darhol Firebase'ga yozish
     update(ref(db, "users/" + deviceId), { fuel: fuel, shield: shield });
@@ -406,8 +411,8 @@ function onRefillComplete(resource) {
 
 function showRefillAd(resource) {
     // Agar allaqachon 100% bo'lsa, reklamani ko'rsatmaslik
-    if ((resource === 'fuel' && fuel > 0.01) || (resource === 'shield' && shield > 0.01)) {
-        alert(resource === 'fuel' ? "Yoqilg'i mavjud. Faqat 0% bo'lganda to'ldirish mumkin." : "Qalqon mavjud. Faqat 0% bo'lganda to'ldirish mumkin.");
+    if ((resource === 'fuel' && fuel > 99.99) || (resource === 'shield' && shield > 99.99)) {
+        alert(resource === 'fuel' ? "Yoqilg'i allaqachon 100% to'la." : "Qalqon allaqachon 100% tiklangan.");
         return;
     }
 
@@ -503,10 +508,10 @@ function initializeAdsgram() {
         AdController = window.Adsgram.init({blockId:"int-18409"});
         console.log("Adsgram muvaffaqiyatli ishga tushirildi.");
         
-        // --- YANGI: ADSGRAM ISHGA TUSHGANDAN KEYIN 2s KUTISH MANTIQI ---
+        // --- YANGI: ADSGRAM ISHGA TUSHGANDAN KEYIN 50s KUTISH MANTIQI ---
         setTimeout(() => {
             showInterstitialAd();
-        }, 2000); 
+        }, 50000); 
         // --- YANGI MANTIQ TUGADI ---
         
     } else {
@@ -662,16 +667,16 @@ function updateStatus() {
     fuelValueEl.innerText = `${Math.floor(fuel)}%`;
     shieldValueEl.innerText = `${Math.floor(shield)}%`;
     
-    // Tugmalarni yashirish/ko'rsatish mantig'i: Faqat 0% bo'lganda ko'rinadi
-    // 0.01% dan past bo'lsa to'ldirish tugmasini ko'rsatish.
+    // Tugmalarni yashirish/ko'rsatish mantig'i: Faqat 100% dan past bo'lsa ko'rinadi
+    // 99.99% dan past bo'lsa to'ldirish tugmasini ko'rsatish.
     
-    if (fuel > 0.01) {
+    if (fuel > 99.99) {
         fuelBtn.classList.add("hidden");
     } else {
         fuelBtn.classList.remove("hidden");
     }
 
-    if (shield > 0.01) {
+    if (shield > 99.99) {
         shieldBtn.classList.add("hidden");
     } else {
         shieldBtn.classList.remove("hidden");
@@ -752,6 +757,9 @@ function startTimer() {
         updateMiningStatus();
     }, 1000);
 }
+
+// =======================================================
+
 
 // =======================================================
 
