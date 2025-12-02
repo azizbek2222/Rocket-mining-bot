@@ -3,7 +3,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta charset="UTF-8">
-    <title>Tasks - Rocket Mining</title>
+    <title>Vazifalar - Rocket Mining</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -177,7 +177,7 @@ async function loadUserData() {
             return userData.balance || 0.00;
         }
     } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Foydalanuvchi ma'lumotlarini olishda xatolik:", error); // O'zgartirildi
     }
     return 0.00;
 }
@@ -218,8 +218,8 @@ async function loadTasks() {
             noTasksEl.style.display = 'block';
         }
     } catch (error) {
-        console.error("Error loading tasks:", error);
-        taskListEl.innerHTML = '<li style="text-align: center; color: #ff5722;">Error loading tasks.</li>';
+        console.error("Vazifalarni yuklashda xatolik:", error); // O'zgartirildi
+        taskListEl.innerHTML = '<li style="text-align: center; color: #ff5722;">Vazifalarni yuklashda xatolik.</li>'; // O'zgartirildi
     }
 }
 
@@ -231,8 +231,8 @@ function displayTask(taskId, task) {
     
     li.innerHTML = `
         <div class="task-title">${task.name}</div>
-        <div class="task-details">Reward: <span>${task.reward} ₽</span></div>
-        <div class="task-details">Wait Time: <span>${task.wait_time} seconds</span></div>
+        <div class="task-details">Mukofot: <span>${task.reward} so'm</span></div>
+        <div class="task-details">Kutish Vaqti: <span>${task.wait_time} soniya</span></div>
         <button class="task-btn start" data-task-id="${taskId}" data-url="${task.url || ''}" onclick="startTask('${taskId}', ${task.wait_time}, ${task.reward})">Vazifani boshlash</button>
         `;
     taskListEl.appendChild(li);
@@ -250,7 +250,7 @@ window.startTask = function(taskId, waitTime, reward) {
     }
 
     startBtn.disabled = true;
-    startBtn.innerText = "Processing...";
+    startBtn.innerText = "Jarayon ketmoqda..."; // O'zgartirildi
     startBtn.classList.remove('start');
     
     // 2. Tasdiqlash vaqtini hisobga olish (foydalanuvchiga ko'rsatmasdan)
@@ -272,7 +272,7 @@ async function confirmTask(taskId, reward, requiredWaitTime, startTime) {
     const confirmBtn = taskItem.querySelector('.task-btn');
 
     confirmBtn.disabled = true;
-    confirmBtn.innerText = "Processing...";
+    confirmBtn.innerText = "Jarayon ketmoqda..."; // O'zgartirildi
 
     // 1. Kutish vaqtini tekshirish
     const timeElapsed = (Date.now() - startTime) / 1000; // Sekunddagi farq
@@ -280,10 +280,10 @@ async function confirmTask(taskId, reward, requiredWaitTime, startTime) {
     if (timeElapsed < requiredWaitTime) {
         // Agar yetarli vaqt o'tmagan bo'lsa
         const remaining = Math.ceil(requiredWaitTime - timeElapsed);
-        alert(`Please wait ${remaining} more seconds to confirm the task.`);
+        alert(`Iltimos, vazifani tasdiqlash uchun yana ${remaining} soniya kuting.`); // O'zgartirildi
         
         // Tugmani eski holatiga qaytarish (qayta boshlashga majbur qilish)
-        confirmBtn.innerText = "Task Failed. Try Again (Start)";
+        confirmBtn.innerText = "Vazifa bajarilmadi. Qayta urinib ko'ring (Boshlash)"; // O'zgartirildi
         confirmBtn.disabled = false;
         confirmBtn.classList.remove('confirm');
         confirmBtn.classList.add('start');
@@ -303,18 +303,20 @@ async function confirmTask(taskId, reward, requiredWaitTime, startTime) {
         });
         
         // 3. Foydalanuvchi interfeysini yangilash: Bajarilgan deb belgilash
-        confirmBtn.innerText = `+${reward.toFixed(2)} ₽ Added! (Completed)`;
+        // Valyuta o'zgartirildi: so'm
+        confirmBtn.innerText = `+${reward.toFixed(2)} so'm qo'shildi! (Bajarildi)`; 
         confirmBtn.classList.remove('confirm');
         confirmBtn.classList.add('completed');
         
         // 4. Vazifani ro'yxatdan olib tashlash
         taskItem.remove(); 
         
-        alert(`Task "${taskId}" completed successfully! ${reward.toFixed(2)} ₽ added to your balance.`);
+        // Valyuta o'zgartirildi: so'm
+        alert(`Vazifa "${taskId}" muvaffaqiyatli yakunlandi! Balansingizga ${reward.toFixed(2)} so'm qo'shildi.`); 
 
     } catch (error) {
-        console.error("Error confirming task and updating balance:", error);
-        confirmBtn.innerText = "Error. Try again.";
+        console.error("Vazifani tasdiqlash va balansni yangilashda xatolik:", error); // O'zgartirildi
+        confirmBtn.innerText = "Xatolik. Qayta urinib ko'ring."; // O'zgartirildi
         confirmBtn.disabled = false;
         confirmBtn.classList.remove('completed');
     }
