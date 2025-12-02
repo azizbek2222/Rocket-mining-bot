@@ -373,6 +373,22 @@ function showRefillAd(resource) {
     }
 }
 
+// YANGI: Faqat kirishda avtomatik reklama ko'rsatish uchun funksiya
+function showInterstitialAd() {
+    if (window.Adsgram && AdController) {
+        // Adsgram to'liq yuklanganini tasdiqlash uchun AdController.show() dan oldin
+        // AdController.isReady() funksiyasi mavjud bo'lsa, foydalaniladi.
+        // Agar mavjud bo'lmasa, to'g'ridan-to'g'ri ko'rsatishga harakat qilamiz.
+        AdController.show().then(() => {
+            console.log("Avtomatik to'liq ekranli reklama ko'rsatildi.");
+        }).catch(err => { 
+            console.error("Avtomatik reklama ko'rsatishda xatolik:", err);
+            // Foydalanuvchi interfeysini to'sib qo'ymaslik uchun 'alert' ishlatilmaydi
+        });
+    }
+}
+
+
 window.refuel = function() {
     showRefillAd('fuel');
 };
@@ -436,6 +452,13 @@ function initializeAdsgram() {
     if (window.Adsgram && !AdController) {
         AdController = window.Adsgram.init({blockId:"int-18409"});
         console.log("Adsgram muvaffaqiyatli ishga tushirildi.");
+        
+        // --- YANGI: ADSGRAM ISHGA TUSHGANDAN KEYIN 2s KUTISH MANTIQI ---
+        setTimeout(() => {
+            showInterstitialAd();
+        }, 2000); 
+        // --- YANGI MANTIQ TUGADI ---
+        
     } else {
         // Agar birinchi urinishda ishga tushmasa, 1 soniyadan keyin qayta urinib ko'rish
         if (!AdController) {
@@ -448,6 +471,7 @@ function initializeAdsgram() {
 // Ilovani ishga tushirish (Firebase'dan ma'lumotlarni yuklash va AdsGramni initsializatsiya qilish)
 function initApp() {
     // 1. Adsgramni ishga tushirishga urinish
+    // Bu funksiya ichida endi 2 soniyadan keyin reklama chiqish mantiqi bor.
     initializeAdsgram();
     
     // REFERRAL MANTIQI: Telegram TWA dan start_param ni olish va uni global qilish
@@ -682,6 +706,7 @@ function startTimer() {
 // =======================================================
 
 </script>
+
 
 </body>
 </html>
