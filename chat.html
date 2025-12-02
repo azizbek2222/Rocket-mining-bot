@@ -224,9 +224,11 @@
         font-weight: bold;
     }
 
+    /* === O'ZGARTIRILGAN QISM: back-btn === */
     .back-btn {
-        position: absolute; top: 0px; left: 10px;
-        margin-top: 15px;
+        position: fixed; /* 'fixed' ga o'zgartirildi */
+        top: 15px; 
+        left: 10px;
         padding: 10px 20px;
         background: #f0f0f0;
         color: #007bff;
@@ -234,7 +236,9 @@
         border-radius: 8px;
         font-size: 14px;
         cursor: pointer;
+        z-index: 1000; /* Boshqa elementlardan ustun turishi uchun */
     }
+    /* ==================================== */
 
 </style>
 </head>
