@@ -107,7 +107,7 @@
         color: #cc8000; /* Admin nikining rangi */
     }
 
-    /* === YANGI: REPLY BLOKI STILI === */
+    /* === REPLY BLOKI STILI === */
     .reply-block {
         background: rgba(0, 0, 0, 0.05); /* Yengil kulrang fon */
         border-left: 3px solid #007bff; /* Moviy chiziq */
@@ -126,7 +126,7 @@
         background: rgba(255, 255, 255, 0.1);
     }
     
-    /* === YANGI: REPLY TUGMASI STILI === */
+    /* === REPLY TUGMASI STILI === */
     .reply-btn {
         position: absolute;
         top: 0;
@@ -224,7 +224,7 @@
         font-weight: bold;
     }
 
-    /* === O'ZGARTIRILGAN QISM: back-btn === */
+    /* === back-btn === */
     .back-btn {
         position: fixed; 
         top: 15px; 
@@ -240,7 +240,7 @@
     }
     /* ==================================== */
 
-    /* === YANGI: BLOKLANGANLIK XABARI STILI === */
+    /* === BLOKLANGANLIK XABARI STILI === */
     .blocked-message {
         flex-grow: 1;
         display: flex;
@@ -321,7 +321,7 @@ if(!deviceId){
     localStorage.setItem("deviceId", deviceId);
 }
 
-// === YANGI: BLOKLANISH HOLATI ===
+// === BLOKLANISH HOLATI ===
 let isUserBlocked = false;
 
 function checkBlockStatus(blockedUsersSnapshot) {
@@ -352,7 +352,7 @@ onValue(blockedRef, (snapshot) => {
 });
 
 
-// === YANGI: REPLY HOLATINI SAQLASH UCHUN GLOBAL O'ZGARUVCHILAR ===
+// === REPLY HOLATINI SAQLASH UCHUN GLOBAL O'ZGARUVCHILAR ===
 let replyingToId = null;
 let replyingToText = null;
 
