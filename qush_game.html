@@ -167,7 +167,7 @@
             messageElement.innerHTML = `
                 <span>Total Balance: ${currentUSDT.toFixed(5)} USDT</span>
                 <button onclick="startGame()">Starting the game</button>
-                <p style="font-size: 16px; margin-top: 10px;">(Yoki Ekranga/Space tugmasiga bosing)</p>
+                <p style="font-size: 16px; margin-top: 10px;">(Or press the Screen/Space key)</p>
             `;
             
             // Firebase yuklangandan so'ng onlayn holatni boshlash
@@ -378,7 +378,7 @@
             saveUserScore().then(() => {
                  messageElement.style.display = 'flex';
                  // Valyuta nomi USDT ga o'zgartirildi
-                 messageElement.innerHTML = `Game over! Siz **${score}** quvurdan o'tdingiz.<br>Jami USDT: **${currentUSDT.toFixed(4)}**<br><button onclick="startGame()">Restart</button>`;
+                 messageElement.innerHTML = `Game over! You have piped **${score}**.<br>Total USDT: **${currentUSDT.toFixed(4)}**<br><button onclick="startGame()">Restart</button>`;
             });
         }
 
@@ -399,7 +399,7 @@
         function startAdAndGame() {
             // Reklama chiqishi haqida xabar berish
             messageElement.style.display = 'flex';
-            messageElement.innerHTML = `<span>Loading advertisement... Iltimos kuting.</span>`;
+            messageElement.innerHTML = `<span>Loading advertisement... Please wait.</span>`;
             
             // Reklamani ko'rsatish
             AdController.show().then((result) => {
@@ -415,7 +415,7 @@
                 // Qayta urinish xabarini ko'rsatish
                 messageElement.innerHTML = `
                     <span>Reklama yuklanmadi!</span>
-                    <p style="font-size: 20px; color: #FF6347;">Iltimos, internetingizni tekshiring yoki qayta urining.</p>
+                    <p style="font-size: 20px; color: #FF6347;">Please check your internet or try again..</p>
                     <button onclick="startGame()">Retry</button>
                     <p style="font-size: 16px; margin-top: 10px;">(Or press the Screen/Space key)</p>
                 `;
