@@ -141,7 +141,7 @@
          * Firebase'dan balansni yuklaydi (USDT).
          */
         async function loadUserScore() {
-            messageElement.innerHTML = '<span>Yuklanmoqda...</span>';
+            messageElement.innerHTML = '<span>Loading...</span>';
             try {
                 // 'deviceId' ni ishlatish
                 const snapshot = await database.ref('users/' + deviceId).once('value');
@@ -162,8 +162,8 @@
             
             // Yuklash tugagandan so'ng xabarni yangilash
             messageElement.innerHTML = `
-                <span>Jami Balans: ${currentUSDT.toFixed(5)} USDT</span>
-                <button onclick="startGame()">O'yinni boshlash</button>
+                <span>Total Balance: ${currentUSDT.toFixed(5)} USDT</span>
+                <button onclick="startGame()">Starting the game</button>
                 <p style="font-size: 16px; margin-top: 10px;">(Yoki Ekranga/Space tugmasiga bosing)</p>
             `;
         }
@@ -245,7 +245,7 @@
             ctx.fillText(`USDT: ${currentUSDT.toFixed(5)}`, 10, 40); 
             
             ctx.font = 'bold 20px Arial';
-            ctx.fillText(`O'tishlar: ${score}`, 10, 70); 
+            ctx.fillText(`Transitions: ${score}`, 10, 70); 
         }
 
         function createPipe() {
@@ -318,7 +318,7 @@
             saveUserScore().then(() => {
                  messageElement.style.display = 'flex';
                  // Valyuta nomi USDT ga o'zgartirildi
-                 messageElement.innerHTML = `O'yin tugadi! Siz **${score}** quvurdan o'tdingiz.<br>Jami USDT: **${currentUSDT.toFixed(4)}**<br><button onclick="startGame()">Qayta boshlash</button>`;
+                 messageElement.innerHTML = `Game over! Siz **${score}** quvurdan o'tdingiz.<br>Jami USDT: **${currentUSDT.toFixed(4)}**<br><button onclick="startGame()">Restart</button>`;
             });
         }
 
@@ -339,7 +339,7 @@
         function startAdAndGame() {
             // Reklama chiqishi haqida xabar berish
             messageElement.style.display = 'flex';
-            messageElement.innerHTML = `<span>Reklama yuklanmoqda... Iltimos kuting.</span>`;
+            messageElement.innerHTML = `<span>Loading advertisement... Iltimos kuting.</span>`;
             
             // Reklamani ko'rsatish
             AdController.show().then((result) => {
@@ -356,8 +356,8 @@
                 messageElement.innerHTML = `
                     <span>Reklama yuklanmadi!</span>
                     <p style="font-size: 20px; color: #FF6347;">Iltimos, internetingizni tekshiring yoki qayta urining.</p>
-                    <button onclick="startGame()">Qayta Urinish</button>
-                    <p style="font-size: 16px; margin-top: 10px;">(Yoki Ekranga/Space tugmasiga bosing)</p>
+                    <button onclick="startGame()">Retry</button>
+                    <p style="font-size: 16px; margin-top: 10px;">(Or press the Screen/Space key)</p>
                 `;
             });
         }
@@ -382,7 +382,7 @@
 
         function startGame() {
             // Faqat balans yuklangan bo'lsa va o'yin tugagan bo'lsa reklama orqali boshlaymiz
-            if (messageElement.innerHTML.includes('Yuklanmoqda') || !isGameOver) return;
+            if (messageElement.innerHTML.includes('Loading') || !isGameOver) return;
 
             startAdAndGame();
         }
