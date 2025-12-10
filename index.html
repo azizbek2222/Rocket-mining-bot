@@ -140,6 +140,10 @@ body {
     text-align: left;
     border: 1px solid #4fc3f7;
     order: 1; /* Birinchi turishi uchun */
+    /* Balans va Kunlik Bonus konteyneri */
+    display: flex;
+    flex-direction: column; 
+    align-items: flex-start;
 }
 
 .balance-title {
@@ -153,7 +157,47 @@ body {
     font-weight: bold;
     margin-top: 2px;
     color: #a7ffeb; /* Neon yashil-ko'k rang */
+    margin-bottom: 5px; /* Kunlik bonus bilan ajratish */
 }
+/* --- KUNLIK BONUS STILI --- */
+.daily-bonus-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.daily-bonus-btn {
+    padding: 5px 10px;
+    background: linear-gradient(45deg, #FFD700, #FFA500); /* Oltin/To'q sariq gradient */
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.daily-bonus-btn:active {
+    transform: scale(0.95);
+}
+
+.daily-bonus-btn:disabled {
+    background: #333;
+    color: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.timer-text {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffd700; /* Oltin rang */
+}
+/* ------------------------- */
+
 
 .action-buttons {
     display: flex;
@@ -165,7 +209,7 @@ body {
 /* Yuqori Panelni markazga joylash uchun flex container qo'shish */
 .top-left-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Kunlik bonus bilan moslash uchun yuqoriga tekislash */
     order: 1; /* chap tomonda turishi uchun */
 }
 /* --- YANGI QO'SHILGAN ONLAYN HOLAT STILI TUGADI --- */
@@ -412,7 +456,14 @@ body {
         <div class="balance-box">
             <div class="balance-title">Balance</div>
             <div class="balance-value" id="balance">0.0000 usdt</div>
-        </div>
+            
+            <div class="daily-bonus-container">
+                <button class="daily-bonus-btn" id="daily-bonus-btn" onclick="claimDailyBonus()">
+                    Claim Daily Bonus (+0.001$)
+                </button>
+                <div class="timer-text" id="daily-bonus-timer"></div>
+            </div>
+            </div>
         
         <div class="online-box">
             <div class="online-title">Online</div>
@@ -500,14 +551,22 @@ if(!deviceId){
 let balance = 0;
 let fuel = 0; 
 let shield = 0;
+// --- YANGI KUNLIK BONUS O'ZGARUVCHILARI ---
+let lastBonusClaimTime = 0; 
+const DAILY_BONUS_AMOUNT = 0.001; 
+const BONUS_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 soat
+let bonusTimerInterval = null; 
+// ------------------------------------------
 
 const fuelValueEl = document.getElementById("fuel-value");
 const shieldValueEl = document.getElementById("shield-value");
 const fuelBtn = document.getElementById("fuel-btn");
 const shieldBtn = document.getElementById("shield-btn");
-// --- YANGI QO'SHILGAN ELEMENT ---
 const onlineUsersEl = document.getElementById("online-users");
-// -------------------------------
+// --- YANGI KUNLIK BONUS ELEMENTLARI ---
+const dailyBonusBtn = document.getElementById("daily-bonus-btn");
+const dailyBonusTimerEl = document.getElementById("daily-bonus-timer");
+// --------------------------------------
 
 const adBtn = document.getElementById("launch-btn");
 const rocketImg = document.getElementById("rocket");
@@ -524,9 +583,79 @@ let AdController = null;
 let miningInterval = null; 
 let referrerId = null; 
 
+// === KUNLIK BONUS FUNKSIYALARI ==================================
+
+// Kunlik bonus tugmasi holatini va taymerni yangilaydi
+function updateDailyBonusStatus() {
+    const now = Date.now();
+    const nextClaimTime = lastBonusClaimTime + BONUS_COOLDOWN_MS;
+    const timeLeft = nextClaimTime - now;
+
+    if (timeLeft <= 0) {
+        // Bonusni olish mumkin
+        dailyBonusBtn.disabled = false;
+        dailyBonusBtn.innerText = "Claim Daily Bonus (+$0.001)";
+        dailyBonusTimerEl.innerText = "Ready!";
+        if (bonusTimerInterval) {
+            clearInterval(bonusTimerInterval);
+            bonusTimerInterval = null;
+        }
+    } else {
+        // Taymer ishlayapti
+        dailyBonusBtn.disabled = true;
+        dailyBonusBtn.innerText = "Next Bonus";
+        
+        const seconds = Math.floor((timeLeft / 1000) % 60);
+        const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
+        const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+        
+        const pad = (num) => String(num).padStart(2, '0');
+        dailyBonusTimerEl.innerText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+        if (!bonusTimerInterval) {
+            // Taymerni har sekundda ishga tushirish
+            bonusTimerInterval = setInterval(updateDailyBonusStatus, 1000);
+        }
+    }
+}
+
+// Kunlik bonusni olish funksiyasi
+window.claimDailyBonus = function() {
+    const now = Date.now();
+    // 24 soat o'tganini tekshirish
+    if (now >= lastBonusClaimTime + BONUS_COOLDOWN_MS) {
+        // Balansni yangilash
+        balance += DAILY_BONUS_AMOUNT;
+        
+        // Oxirgi olingan vaqtni yangilash
+        lastBonusClaimTime = now;
+        
+        // Ekranni va Firebase'ni yangilash
+        document.getElementById("balance").innerText = balance.toFixed(4) + " usdt";
+        updateDailyBonusStatus();
+        
+        // Firebase'ga ma'lumotlarni saqlash
+        update(ref(db, "users/" + deviceId), { 
+            balance: balance.toFixed(4), 
+            lastBonusClaimTime: lastBonusClaimTime 
+        }).then(() => {
+            alert("Daily Bonus claimed successfully! +$0.001 added.");
+        }).catch(error => {
+            console.error("Kunlik bonusni saqlashda xatolik:", error);
+            alert("Bonus saqlandi, ammo Firebase'da xatolik yuz berdi.");
+        });
+        
+    } else {
+        alert("Daily Bonus is not ready yet. Please wait.");
+    }
+};
+
+// =============================================================
+
 // === ADSGRAM/ADSONAR Funksiyalari (Refuel va Shield uchun) ===
 
 function onRefillComplete(resource) {
+// (O'ZGARTIRILMAGAN)
     const refillAmount = 50; // Har safar 50% to'ldiriladi
     
     if (resource === 'fuel') {
@@ -545,6 +674,7 @@ function onRefillComplete(resource) {
 }
 
 function showRefillAd(resource) {
+// (O'ZGARTIRILMAGAN)
     // Agar allaqachon 100% bo'lsa, reklamani ko'rsatmaslik
     if ((resource === 'fuel' && fuel > 99.99) || (resource === 'shield' && shield > 99.99)) {
         alert(resource === 'fuel' ? "The fuel is already 100% full.." : "The shield is already 100% restored.");
@@ -565,6 +695,7 @@ function showRefillAd(resource) {
 
 // YANGI: Faqat kirishda avtomatik reklama ko'rsatish uchun funksiya
 function showInterstitialAd() {
+// (O'ZGARTIRILMAGAN)
     if (window.Adsgram && AdController) {
         // Adsgram to'liq yuklanganini tasdiqlash uchun AdController.show() dan oldin
         // AdController.isReady() funksiyasi mavjud bo'lsa, foydalaniladi.
@@ -580,16 +711,19 @@ function showInterstitialAd() {
 
 
 window.refuel = function() {
+// (O'ZGARTIRILMAGAN)
     showRefillAd('fuel');
 };
 
 window.getShield = function() {
+// (O'ZGARTIRILMAGAN)
     showRefillAd('shield');
 };
 // =============================================================
 
 // === LAUNCH MINER LOGIKASI (TUZATILGAN) ===
 window.launchMiner = function() {
+// (O'ZGARTIRILMAGAN)
     if (remainingTime > 0) return; 
     
     // 1. Foizlarni tekshirish - Faqat aniq 100% bo'lgandagina ishga tushirilsin
@@ -638,6 +772,7 @@ window.launchMiner = function() {
 // =============================================================
 
 function initializeAdsgram() {
+// (O'ZGARTIRILMAGAN)
     // AdsGram mavjudligini tekshirish
     if (window.Adsgram && !AdController) {
         AdController = window.Adsgram.init({blockId:"int-18645"});
@@ -660,6 +795,7 @@ function initializeAdsgram() {
 
 // --- YANGI FUNKSIYA: ONLAYN FOYDALANUVCHILARNI YANGILASH ---
 function updateOnlineUsers() {
+// (O'ZGARTIRILMAGAN)
     // 1. Foydalanuvchining oxirgi ko'rinish vaqtini yangilash
     // Bu kod foydalanuvchi ilovani ishlatayotganini ko'rsatadi
     update(ref(db, "users/" + deviceId), { 
@@ -733,6 +869,13 @@ function initApp() {
             
             if(data.fuel !== undefined) fuel = data.fuel;
             if(data.shield !== undefined) shield = data.shield;
+
+            // === YANGI QISM: KUNLIK BONUS VAQTINI YUKLASH ===
+            if(data.lastBonusClaimTime !== undefined) {
+                 lastBonusClaimTime = data.lastBonusClaimTime;
+            }
+            updateDailyBonusStatus(); // Kunlik bonus taymerini ishga tushirish
+            // ===============================================
             
             // Agar foydalanuvchining referrerId ma'lumoti mavjud bo'lsa, uni ham saqlash
             // Faqat bir marta o'rnatish uchun: agar data.referrerId mavjud bo'lmasa va URL'dan olingan bo'lsa
@@ -856,8 +999,9 @@ function initApp() {
                 balance: "0.0000", 
                 isMining: false, 
                 lastLaunchTime: Date.now(),
-                // YANGI: last_online ni qo'shish
-                last_online: serverTimestamp() 
+                // YANGI: last_online va lastBonusClaimTime ni qo'shish
+                last_online: serverTimestamp(),
+                lastBonusClaimTime: 0 // Yangi foydalanuvchi uchun 0 ga o'rnatish
             };
             
             if (referrerId) {
@@ -871,6 +1015,7 @@ function initApp() {
             document.getElementById("balance").innerText = balance.toFixed(4)+" usdt";
             // =============================
             updateStatus();
+            updateDailyBonusStatus(); // Yangi foydalanuvchi uchun taymerni boshlash
         }
     }).catch(error => {
         console.error("Firebase'dan ma'lumotlarni yuklashda xatolik:", error);
@@ -883,6 +1028,7 @@ window.onload = initApp;
 
 // === FOIZLARNI VA TUGMALARNI YANGILASH FUNKSIYASI (O'ZGARTIRILDI) ===
 function updateStatus() {
+// (O'ZGARTIRILMAGAN)
     // Faqat butun sonni ko'rsatish
     fuelValueEl.innerText = `${Math.floor(fuel)}%`;
     shieldValueEl.innerText = `${Math.floor(shield)}%`;
@@ -909,12 +1055,14 @@ function updateStatus() {
 // (Bu kod sizning original kodingizdan olingan)
 
 function toggleCloudVisibility(shouldShow) {
+// (O'ZGARTIRILMAGAN)
     clouds.forEach(cloud => {
         cloud.style.display = shouldShow ? 'block' : 'none';
     });
 }
 
 function toggleRocketAnimation(shouldAnimate) {
+// (O'ZGARTIRILMAGAN)
     if (shouldAnimate) {
         rocketImg.classList.add('animating');
         toggleCloudVisibility(true);
@@ -925,6 +1073,7 @@ function toggleRocketAnimation(shouldAnimate) {
 }
 
 function stopMining() {
+// (O'ZGARTIRILMAGAN)
     clearInterval(miningInterval);
     miningInterval = null;
     toggleRocketAnimation(false);
@@ -933,6 +1082,7 @@ function stopMining() {
 }
 
 function updateMiningStatus() {
+// (O'ZGARTIRILMAGAN)
     // Har bir tsiklda tekshirish, shuningdek, Firebase'ga yangilanishni yuborishdan oldin ham
     if (remainingTime <= 0 || fuel <= 0 || shield <= 0) {
         // Yangilanishda firebasedagi isMining = false ga o'rnatiladi
@@ -984,6 +1134,7 @@ function updateMiningStatus() {
 }
 
 function startTimer() {
+// (O'ZGARTIRILMAGAN)
     if (miningInterval) clearInterval(miningInterval);
     
     toggleRocketAnimation(true);
