@@ -820,7 +820,7 @@ function initializeAdsgram() {
 // (O'ZGARTIRILMAGAN)
     // AdsGram mavjudligini tekshirish
     if (window.Adsgram && !AdController) {
-        AdController = window.Adsgram.init({blockId:"int-18409"});
+        AdController = window.Adsgram.init({blockId:"int-18645"});
         console.log("Adsgram muvaffaqiyatli ishga tushirildi.");
         
         // --- YANGI: ADSGRAM ISHGA TUSHGANDAN KEYIN 50s KUTISH MANTIQI ---
@@ -1126,7 +1126,7 @@ function initApp() {
             update(ref(db, "users/" + deviceId), newUser_data);
             
             // Ekranni yangilash
-            document.getElementById("balance").innerText = balance.toFixed(5)+" usdt";
+            document.getElementById("balance").innerText = balance.toFixed(4)+" usdt";
             updateStatus();
             updateDailyBonusStatus(); 
         }
@@ -1214,15 +1214,16 @@ function updateMiningStatus() {
     // 1. Balansni hisoblash va yangilash
     balance += REWARD_PER_SECOND;
     
-    // ...
-if (referrerId) {
-    // 1% ga ko'paytirilgan miqdor bo'lishi kerak (0.01)
-    const referralPercent = 0.01; 
-    const totalReferrerBonus = effectiveMiningTime * REWARD_PER_SECOND * referralPercent; 
-    // ...
-}
-// ...
-----------------------------------------------------
+    // --- REFERRAL BONUSINI SEKUNDMA-SEKUND HISBLASH ---
+    if (referrerId) {
+        const referralPercent = 0.01; // 1% ga o'zgartirildi
+        const currentReferrerBonus = REWARD_PER_SECOND * referralPercent;
+        
+        // Bu joyda har sekundda referer balansini yangilash tavsiya etilmaydi.
+        // Yuqoridagi `initApp` dagi kabi, faqat sekin-asta yangilash mantiqini qoldirish to'g'ri.
+        // Hozircha, faqat o'z hisobimizni yangilaymiz.
+    }
+    // ----------------------------------------------------
     
     // === O'ZGARTIRILGAN QATOR: Balansni 4 xonali aniqlikda usdt qilish ===
     document.getElementById("balance").innerText = balance.toFixed(4)+" usdt";
@@ -1248,7 +1249,7 @@ if (referrerId) {
     if (remainingTime % 10 === 0) {
         // Shuningdek, 10 sekundda bir marta referer bonusini ham yozamiz
         if (referrerId) {
-             const referralPercent = 0.01; // 1% ga o'zgartirildi
+             const referralPercent = 0.001; // 1% ga o'zgartirildi
              // 10 sekund uchun bonus: 10 * REWARD_PER_SECOND * 0.01
              const bonusFor10Seconds = 10 * REWARD_PER_SECOND * referralPercent;
              
