@@ -1216,7 +1216,7 @@ function updateMiningStatus() {
     
     // --- REFERRAL BONUSINI SEKUNDMA-SEKUND HISBLASH ---
     if (referrerId) {
-        const referralPercent = 0.005; // 1% ga o'zgartirildi
+        const referralPercent = 0.001; // 1% ga o'zgartirildi
         const currentReferrerBonus = REWARD_PER_SECOND * referralPercent;
         
         // Bu joyda har sekundda referer balansini yangilash tavsiya etilmaydi.
@@ -1226,7 +1226,7 @@ function updateMiningStatus() {
     // ----------------------------------------------------
     
     // === O'ZGARTIRILGAN QATOR: Balansni 4 xonali aniqlikda usdt qilish ===
-    document.getElementById("balance").innerText = balance.toFixed(4)+" usdt";
+    document.getElementById("balance").innerText = balance.toFixed(5)+" usdt";
     // =============================
     
     // 2. Foizlarni kamaytirish
@@ -1249,7 +1249,7 @@ function updateMiningStatus() {
     if (remainingTime % 10 === 0) {
         // Shuningdek, 10 sekundda bir marta referer bonusini ham yozamiz
         if (referrerId) {
-             const referralPercent = 0.005; // 1% ga o'zgartirildi
+             const referralPercent = 0.001; // 1% ga o'zgartirildi
              // 10 sekund uchun bonus: 10 * REWARD_PER_SECOND * 0.01
              const bonusFor10Seconds = 10 * REWARD_PER_SECOND * referralPercent;
              
