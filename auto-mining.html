@@ -407,6 +407,8 @@ let isMiningPausedForAd = false; // Mining reklama uchun to'xtatilganmi
 // === GLOBAL STATS O'ZGARUVCHILARI ===
 let totalMined = 0; // Jami ishlangan pulni saqlash
 let onlineUsers = 0; // Online foydalanuvchilar soni
+// === YANGI GLOBAL O'ZGARUVCHI ===
+let isAdminStopped = false; 
 
 // === DOM ELEMENTLARI ===
 const balanceValueEl = document.getElementById("balance-value");
@@ -423,7 +425,7 @@ const minerStatusBoxEl = document.getElementById("miner-status-box");
 
 let AdController = null; 
 
-// === ADSGRAM FUNKSIYALARI ===
+// === ADSGRAM FUNKSIYALARI (Qolgan qismi o'zgarishsiz) ===
 function initializeAdsgram() {
     if (window.Adsgram && !AdController) {
         // Index.html dagi blok IDsi bilan ishga tushirish
@@ -469,7 +471,7 @@ async function showAd() {
 }
 // =============================
 
-// === MINING LOGIKASI ===
+// === MINING LOGIKASI (Qolgan qismi o'zgarishsiz) ===
 
 async function updateMining() {
     // Agar reklama uchun to'xtatilgan bo'lsa, pul qo'shilmaydi
@@ -522,6 +524,15 @@ async function updateMining() {
 
 function startMining() {
     if (miningInterval) return; 
+    
+    // === YANGI TEKSHIRUV: ADMIN BOSHQARUVI ===
+    if (isAdminStopped) {
+        console.log("Mining blocked by Admin Control.");
+        // UI ni yana bir bor yangilash
+        handleMiningControl('stopped', controlMessageEl.innerText || "Ma'mur tomonidan to'xtatilgan."); 
+        return; // Ishga tushirishga ruxsat bermaslik
+    }
+    // === TEKSHIRUV YAKUNI ===
 
     // Har bir sekundda yangilash
     miningInterval = setInterval(updateMining, MINING_INTERVAL_MS);
@@ -576,7 +587,7 @@ window.toggleMining = function() {
     }
 };
 
-// === FIREBASE MULOQOTI ===
+// === FIREBASE MULOQOTI (Qolgan qismi o'zgarishsiz) ===
 
 function listenForGlobalStats() {
     // Online Users
@@ -598,7 +609,7 @@ function listenForGlobalStats() {
 }
 
 
-// === YANGI FUNKSIYALAR: ADMIN BOSHQARUVINI QO'SHISH ===
+// === ADMIN BOSHQARUVINI QO'SHISH (UPDATE: isAdminStopped yangilanishi qo'shildi) ===
 
 /**
  * Admin panelidan kelgan boshqaruv xabarini tinglaydi va unga javob beradi.
@@ -607,7 +618,6 @@ function listenForAdminControl() {
     onValue(ref(db, "stats/mining_control"), (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.val();
-            // console.log("Admin control data received:", data);
             handleMiningControl(data.status, data.message);
         } else {
              // Agar tugun o'chirilgan bo'lsa (default holat - ishlashi kerak)
@@ -623,6 +633,8 @@ function listenForAdminControl() {
  */
 function handleMiningControl(status, message) {
     if (status === 'stopped') {
+        isAdminStopped = true; // <--- YANGI QISM: Miningni ishga tushirishga ruxsat bermaslik
+        
         // 1. Miningni to'xtatish (agar ishlayotgan bo'lsa)
         if (miningInterval) {
             stopMining(false); // Avtomatik to'xtatish
@@ -638,17 +650,17 @@ function handleMiningControl(status, message) {
         controlMessageEl.style.display = 'block';
 
     } else { // status === 'running'
+        isAdminStopped = false; // <--- YANGI QISM: Miningni ishga tushirishga ruxsat berish
+        
         // 1. Tugmalarni va Mining Statusni ko'rsatish
         miningToggleBtn.style.display = 'block';
         minerStatusBoxEl.style.display = 'block';
         
         // 2. Xabarni yashirish
         controlMessageEl.style.display = 'none';
-        
-        // **Eslatma:** Miningni avtomatik ravishda qayta boshlamaymiz, foydalanuvchi "Start" tugmasini bosishi kerak.
     }
 }
-// === YANGI FUNKSIYALAR YAKUNI ===
+// === FUNKSIYALAR YAKUNI ===
 
 
 function loadInitialData() {
@@ -662,18 +674,14 @@ function loadInitialData() {
             
             initializeAdsgram();
             listenForGlobalStats();
-            // === YANGI QO'SHILGAN FUNKSIYA CHAQIRUVI ===
             listenForAdminControl(); 
-            // ===========================================
         } else {
             currentBalance = 0;
             saveBalanceToFirebase().then(() => {
                 balanceValueEl.innerText = currentBalance.toFixed(6) + " usdt";
                 initializeAdsgram();
                 listenForGlobalStats();
-                // === YANGI QO'SHILGAN FUNKSIYA CHAQIRUVI ===
                 listenForAdminControl(); 
-                // ===========================================
             });
         }
     }).catch(error => {
