@@ -323,6 +323,32 @@ body {
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <script type="module">
+// ==========================================================
+// === XAVFSIZLIK CHEKLOVI: FAQAT TELEGRAM MINI APP UCHUN ===
+// ==========================================================
+// window.Telegram.WebApp mavjudligini tekshirish
+if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
+    // Agar Telegram Web App muhitida bo'lmasa, butun sahifani bloklaymiz
+    document.body.innerHTML = `
+        <div style="
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #1a0b33; color: #ffeb3b; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            text-align: center; padding: 20px; z-index: 100;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        ">
+            <h1 style="color: #ff5722;">⛔ ACCESS DENIED ⛔</h1>
+            <p style="font-size: 18px;">This feature is only available within the official Telegram Mini Application.</p>
+            <p style="font-size: 14px; color: #bbdefb;">Iltimos, ushbu funksiyadan faqat Telegram Mini App ichida foydalaning.</p>
+        </div>
+    `;
+    // Keyingi kodni ishga tushirishni to'xtatish
+    throw new Error("Access denied: Not running in Telegram Web App.");
+}
+// ==========================================================
+// === CHEKLOV YAKUNLANDI. FAQAT TMA DA ISHlayDI. ===
+// ==========================================================
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 // onValue va set qo'shildi
 import { getDatabase, ref, get, child, update, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -357,8 +383,9 @@ const MINING_INTERVAL_MS = 1000;         // Har 1 sekundda yangilash
 let currentBalance = 0;
 let miningInterval = null;
 let earnedSinceLastAd = 0; // Reklamadan keyin yig'ilgan pul
+let isMiningPausedForAd = false; // Mining reklama uchun to'xtatilganmi
 
-// === YANGI GLOBAL STATS O'ZGARUVCHILARI ===
+// === GLOBAL STATS O'ZGARUVCHILARI ===
 let totalMined = 0; // Jami ishlangan pulni saqlash
 let onlineUsers = 0; // Online foydalanuvchilar soni
 
@@ -367,7 +394,7 @@ const balanceValueEl = document.getElementById("balance-value");
 const miningToggleBtn = document.getElementById("mining-toggle-btn");
 const miningStatusEl = document.getElementById("mining-status");
 const progressValueEl = document.getElementById("progress-value");
-// YANGI: Global Stats elementlari
+// Global Stats elementlari
 const onlineUsersCountEl = document.getElementById("online-users-count");
 const totalMinedUsdEl = document.getElementById("total-mined-usd");
 
@@ -385,13 +412,25 @@ function initializeAdsgram() {
     }
 }
 
+/**
+ * Reklamani ko'rsatadi va uning tugashini kutadi.
+ * @returns {Promise<boolean>} Reklama muvaffaqiyatli ko'rsatilsa/tugasa true, aks holda false.
+ */
 async function showAd() {
     if (!window.Adsgram || !AdController) {
-        console.error("Adsgram ishga tushirilmagan.");
-        return true; // Agar reklama yuklanmasa, davom etishga ruxsat berish
+        console.error("Adsgram ishga tushirilmagan (Brauzer rejimida).");
+        // FIX: Agar Adsgram mexanizmi ishlamasa, FALSE qaytaramiz.
+        miningStatusEl.innerText = "Ad Service Unavailable ❌"; 
+        miningStatusEl.style.color = "#ff5722"; 
+        isMiningPausedForAd = false; // Aslida to'xtatilmagan, shunchaki ishga tushmadi
+        return false; 
     }
     
-    miningStatusEl.innerText = "Ad is loading... 📺";
+    // Miningni to'xtatish (agar ishlayotgan bo'lsa)
+    stopMining(false); 
+    isMiningPausedForAd = true; // Reklama uchun to'xtatilgan deb belgilaymiz
+
+    miningStatusEl.innerText = "Ad is showing... 📺";
     miningStatusEl.style.color = "#ffcc00"; // Sariq rang
     
     try {
@@ -399,8 +438,11 @@ async function showAd() {
         console.log("Reklama muvaffaqiyatli ko'rsatildi.");
         return true; // Muvaffaqiyat
     } catch (err) { 
-        console.error("Reklama ko'rsatishda xatolik:", err);
-        return true; // Agar xato bo'lsa ham, loopni davom ettirish
+        console.error("Reklama ko'rsatishda xatolik yoki foydalanuvchi o'tkazib yubordi:", err);
+        // Reklama serveri xatosi yoki foydalanuvchi yopgan bo'lsa ham (real appda davom ettirish uchun)
+        return true; 
+    } finally {
+        isMiningPausedForAd = false; // Reklama jarayoni tugadi
     }
 }
 // =============================
@@ -408,38 +450,37 @@ async function showAd() {
 // === MINING LOGIKASI ===
 
 async function updateMining() {
+    // Agar reklama uchun to'xtatilgan bo'lsa, pul qo'shilmaydi
+    if (isMiningPausedForAd) {
+        return; 
+    }
+    
     // 1. Pulni qo'shish
     earnedSinceLastAd += MINING_REWARD_PER_SECOND;
-    
-    // 2. Balansni yangilash (joriy sessiya uchun)
     currentBalance += MINING_REWARD_PER_SECOND;
-    
-    // YANGI: Umumiy qazib olingan pulni yangilash (lokal)
     totalMined += MINING_REWARD_PER_SECOND; 
     
-    // 3. Ekranni yangilash
+    // 2. Ekranni yangilash
     balanceValueEl.innerText = currentBalance.toFixed(6) + " usdt";
     progressValueEl.innerText = `${earnedSinceLastAd.toFixed(6)} / ${AD_TRIGGER_AMOUNT.toFixed(6)} USDT`;
-    
-    // YANGI: Umumiy qazib olingan pulni ekranda yangilash
     totalMinedUsdEl.innerText = totalMined.toFixed(4) + " $";
 
-    // 4. Reklama triggerini tekshirish
+    // 3. Reklama triggerini tekshirish
     if (earnedSinceLastAd >= AD_TRIGGER_AMOUNT) {
         
-        // MININGNI TO'XTATISH
-        stopMining(false); // Avtomatik to'xtatish (false)
+        // **Muhim:** Reklama chiqishi kerak bo'lgan pul miqdori yig'ildi.
+        // Miningni to'xtatish va pulni saqlash.
+        stopMining(false); // Avtomatik to'xtatish (userInitiated=false)
         
         miningStatusEl.innerText = "Reward reached! Saving balance... 💰";
         
         // Pulni Firebase'ga saqlash (shaxsiy balans va global stat)
         await saveBalanceToFirebase();
         
-        // Reklamani ko'rsatish
-        miningStatusEl.innerText = "Ad is showing... Waiting to resume. ⏸️";
+        // Reklamani ko'rsatish funksiyasini chaqirish
         const adShown = await showAd(); 
         
-        // Reklama ko'rsatilgandan so'ng (muvaffaqiyatli yoki muvaffaqiyatsiz bo'lsa ham)
+        // Reklama tugagandan so'ng (muvaffaqiyatli yoki muvaffaqiyatsiz)
         if (adShown) {
             earnedSinceLastAd = 0; // Hisoblagichni 0 ga qaytarish
             progressValueEl.innerText = `${earnedSinceLastAd.toFixed(6)} / ${AD_TRIGGER_AMOUNT.toFixed(6)} USDT`;
@@ -447,23 +488,23 @@ async function updateMining() {
             // Miningni avtomatik davom ettirish
             startMining();
         } else {
-             // Bu holatda (agar showAd() false qaytarsa, garchi biz true qaytaryapmiz)
-             miningStatusEl.innerText = "Ad error. Please try again. ❌";
+             // FIX: Agar showAd() FALSE qaytarsa (ya'ni, brauzerda yoki xizmat mavjud bo'lmasa)
+             // miningni qayta ishga tushirmaymiz.
+             miningStatusEl.innerText = "Ad failed. Click Start to retry. ⚠️";
+             miningStatusEl.style.color = "#ffeb3b"; // Sariq rang
+             // earnedSinceLastAd bu yerda saqlanib qoladi, keyingi urinishda yana saqlanadi
         }
     }
 }
 
 
 function startMining() {
-    if (miningInterval) return; // Agar allaqachon ishlayotgan bo'lsa, qaytamiz
-
-    // Birinchi marta yangilash
-    updateMining();
+    if (miningInterval) return; 
 
     // Har bir sekundda yangilash
     miningInterval = setInterval(updateMining, MINING_INTERVAL_MS);
     
-    // YANGI: Foydalanuvchi online holatini saqlash
+    // Foydalanuvchi online holatini saqlash
     set(ref(db, "online_users/" + deviceId), true);
 
     // Interfeysni yangilash
@@ -483,7 +524,7 @@ function stopMining(userInitiated = true) {
         miningInterval = null;
     }
     
-    // YANGI: Foydalanuvchi online holatini o'chirish
+    // Foydalanuvchi online holatini o'chirish (faqat foydalanuvchi tugmani bossa)
     if (userInitiated) {
         set(ref(db, "online_users/" + deviceId), null);
     }
@@ -502,10 +543,9 @@ window.toggleMining = function() {
         
         // Mining to'xtatilganda qolgan pulni saqlash
         if (earnedSinceLastAd > 0) {
-            // Balansni yangilash va Firebase'ga saqlash (va global statni ham)
             saveBalanceToFirebase().then(() => {
                  alert(`Mining stopped. ${earnedSinceLastAd.toFixed(6)} USDT added to your balance.`);
-                 earnedSinceLastAd = 0; // Saqlangan pulni 0 ga qaytarish
+                 earnedSinceLastAd = 0; 
                  progressValueEl.innerText = `${earnedSinceLastAd.toFixed(6)} / ${AD_TRIGGER_AMOUNT.toFixed(6)} USDT`;
             });
         }
@@ -516,7 +556,6 @@ window.toggleMining = function() {
 
 // === FIREBASE MULOQOTI ===
 
-// YANGI: Global statistikani doimiy tinglash (real-time)
 function listenForGlobalStats() {
     // Online Users
     onValue(ref(db, "online_users"), (snapshot) => {
@@ -541,24 +580,18 @@ function loadInitialData() {
     get(child(dbRef, "users/" + deviceId)).then(snapshot => {
         if (snapshot.exists()) {
             const data = snapshot.val();
-            // Balansni stringdan raqamga o'tkazish
             currentBalance = parseFloat(data.balance) || 0; 
             
-            // Ekranni yangilash
             balanceValueEl.innerText = currentBalance.toFixed(6) + " usdt";
             progressValueEl.innerText = `${earnedSinceLastAd.toFixed(6)} / ${AD_TRIGGER_AMOUNT.toFixed(6)} USDT`;
             
-            // Foydalanuvchi ma'lumotlarini yuklagandan so'ng, Adsgramni ishga tushirish
             initializeAdsgram();
-            // YANGI: Global statslarni tinglashni boshlash
             listenForGlobalStats();
         } else {
-            // Yangi foydalanuvchi: Bazaga yozishdan oldin balansni yangilash
             currentBalance = 0;
             saveBalanceToFirebase().then(() => {
                 balanceValueEl.innerText = currentBalance.toFixed(6) + " usdt";
                 initializeAdsgram();
-                // YANGI: Global statslarni tinglashni boshlash
                 listenForGlobalStats();
             });
         }
@@ -569,22 +602,16 @@ function loadInitialData() {
 }
 
 function saveBalanceToFirebase() {
-    // 1. Shaxsiy Balansni yangilash
     const newTotalBalance = currentBalance;
-    
-    // 2. Global statni yangilash
-    // Qolgan pulni oldingi umumiy pulga qo'shib, yangi summani olish
     const amountToAdd = earnedSinceLastAd;
     const newGlobalTotal = totalMined + amountToAdd;
     
-    // Ikkala o'zgarishni ham bir vaqtda (yoki ketma-ket) Firebase'ga yozish
     const updates = {};
-    updates["users/" + deviceId + "/balance"] = newTotalBalance.toFixed(4); // Shaxsiy balans
-    updates["stats/total_mined_usd"] = newGlobalTotal.toFixed(4); // Global stat
+    updates["users/" + deviceId + "/balance"] = newTotalBalance.toFixed(4); 
+    updates["stats/total_mined_usd"] = newGlobalTotal.toFixed(4); 
     
     return update(dbRef, updates).then(() => {
         console.log(`Firebase updated. Balance: ${newTotalBalance.toFixed(4)}, Global Total: ${newGlobalTotal.toFixed(4)}`);
-        // Global totalni lokal o'zgaruvchida yangilash
         totalMined = newGlobalTotal;
     }).catch(error => {
         console.error("Firebase saving error:", error);
