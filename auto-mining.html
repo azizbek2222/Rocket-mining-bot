@@ -632,7 +632,7 @@ function handleMiningControl(status, message) {
         minerStatusBoxEl.style.display = 'none'; 
         
         // 3. Xabarni ko'rsatish
-        controlMessageEl.innerText = message || "Ma'mur tomonidan to'xtatildi."; 
+        controlMessageEl.innerText = message || "Suspended by administrator."; 
         controlMessageEl.style.display = 'block'; 
 
     } else { // status === 'running'
