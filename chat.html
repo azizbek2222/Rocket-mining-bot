@@ -12,7 +12,7 @@
         padding: 0;
         height: 100vh;
         display: flex;
-        flex-direction: column; /* Asosiy kontentni ustma-ust qo'yish */
+        flex-direction: column; 
     }
     .chat-title {
         text-align: center;
@@ -21,17 +21,17 @@
         color: white;
         font-size: 18px;
         font-weight: bold;
-        flex-shrink: 0; /* Sarlavha o'zgarmas o'lchamda turadi */
+        flex-shrink: 0; 
     }
     .chat-container {
-        flex-grow: 1; /* Kontent qismi bo'sh joyni egallaydi */
+        flex-grow: 1; 
         display: flex;
         flex-direction: column;
         padding: 10px;
         max-width: 600px;
         width: 100%;
         margin: 0 auto;
-        box-sizing: border-box; /* Padding hisobga olinadi */
+        box-sizing: border-box; 
     }
     /* Xabarlar ro'yxati joylashuvi */
     #chat-messages {
@@ -154,7 +154,7 @@
     }
     /* Input maydoni */
     .chat-input-container {
-        flex-shrink: 0; /* Bu qism joylashuvni ushlab turadi */
+        flex-shrink: 0; 
         display: flex;
         flex-direction: column;
         padding: 10px;
@@ -292,6 +292,54 @@
         margin: 20px;
         box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
     }
+    
+    /* === LIVE CHAT STYLING (Yangi qo'shildi) === */
+    .live-stream-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: #333;
+        color: white;
+        border-radius: 12px 12px 0 0;
+        margin-top: 10px;
+    }
+    .live-stream-header button {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    #go-live-btn {
+        background: #ff4d4d;
+        color: white;
+    }
+    #go-live-btn:hover {
+        background: #e60000;
+    }
+    #join-live-btn {
+        background: #00c16e;
+        color: white;
+        display: none; /* Dastlab yashiriladi */
+    }
+    #join-live-btn:hover {
+        background: #00a25e;
+    }
+    #live-indicator {
+        font-size: 14px;
+        color: #ff4d4d;
+        font-weight: bold;
+        animation: pulse 1s infinite;
+        display: none;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.8; }
+        50% { opacity: 1; }
+        100% { opacity: 0.8; }
+    }
+    /* ======================================= */
 </style>
 </head>
 <body>
@@ -301,6 +349,14 @@
 </div>
 
 <div id="chat-content" class="chat-container">
+    
+    <div class="live-stream-header">
+        <span id="live-indicator">🔴 LIVE</span>
+        <div id="live-controls">
+            <button id="join-live-btn" onclick="joinLiveStream()">Jonli efirga qo'shilish</button>
+            <button id="go-live-btn" onclick="startLiveStream()">Jonli efirni boshlash</button>
+        </div>
+    </div>
     <ul id="chat-messages">
         </ul>
     
@@ -332,7 +388,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, push, onValue, serverTimestamp, query, limitToLast, set, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 // Firebase Storage importlari olib tashlandi.
 
 // === FIREBASE KONFIGURATSIYASI ===
@@ -354,12 +410,29 @@ const db = getDatabase(app);
 const chatRef = ref(db, 'chats/global_chat'); 
 const blockedRef = ref(db, 'blocked_users');
 
+// === YAXSHILANGAN ONLINE/LIVE REF'LAR QO'SHILDI ===
+const liveStreamRef = ref(db, 'live_stream/current_stream');
+const onlineUsersRef = ref(db, 'online_users'); // Online foydalanuvchilar ro'yxati
+
 // Device ID ni olish (asosiy ilovadagi kabi)
 let deviceId = localStorage.getItem("deviceId");
 if(!deviceId){
     deviceId = "user_"+Math.random().toString(36).substr(2,9);
     localStorage.setItem("deviceId", deviceId);
 }
+const currentUsername = deviceId.substring(0, 8); // Foydalanuvchi nomi
+
+// === ONLINE HOLATINI BOSHQARISH (QO'SHILDI) ===
+const userOnlineRef = ref(db, `online_users/${deviceId}`);
+
+// Ulanish uzilganda foydalanuvchini online ro'yxatidan olib tashlash
+onDisconnect(userOnlineRef).remove();
+
+// Foydalanuvchini online ro'yxatiga qo'shish
+set(userOnlineRef, {
+    username: currentUsername,
+    last_seen: serverTimestamp()
+});
 
 // === BLOKLANISH HOLATI ===
 let isUserBlocked = false;
@@ -386,9 +459,91 @@ onValue(blockedRef, (snapshot) => {
     checkBlockStatus(snapshot);
 });
 
-// === REPLY HOLATINI SAQLASH UCHUN GLOBAL O'ZGARUVCHILAR ===
-let replyingToId = null;
-let replyingToText = null;
+// === LIVE STREAM MANTIQI (QO'SHILDI) ===
+
+let currentLiveStreamer = null;
+
+onValue(liveStreamRef, (snapshot) => {
+    const liveData = snapshot.val();
+    const joinBtn = document.getElementById('join-live-btn');
+    const goLiveBtn = document.getElementById('go-live-btn');
+    const liveIndicator = document.getElementById('live-indicator');
+    
+    // Hozirgi efir tugadi
+    if (!liveData) {
+        currentLiveStreamer = null;
+        liveIndicator.style.display = 'none';
+        joinBtn.style.display = 'none';
+        goLiveBtn.innerText = "Jonli efirni boshlash";
+        goLiveBtn.disabled = false;
+        return;
+    }
+    
+    currentLiveStreamer = liveData.user_id;
+    const streamerUsername = liveData.username;
+    liveIndicator.style.display = 'inline';
+    
+    // Foydalanuvchi o'zi efir qilayotgan bo'lsa
+    if (currentLiveStreamer === deviceId) {
+        goLiveBtn.innerText = "Efirni tugatish (LIVE)";
+        goLiveBtn.disabled = false;
+        joinBtn.style.display = 'none';
+        liveIndicator.innerHTML = `🔴 LIVE: Siz efirdasiz`;
+        
+        // Agar o'zi efir qilayotgan bo'lsa, ulanish uzilganda efirni ham o'chirsin
+        onDisconnect(liveStreamRef).remove();
+
+    } 
+    // Boshqa birov efir qilayotgan bo'lsa
+    else {
+        liveIndicator.innerHTML = `🔴 LIVE: ${streamerUsername}`;
+        goLiveBtn.innerText = "Jonli efirni boshlash";
+        goLiveBtn.disabled = true; // Boshqa birov efirda bo'lsa boshlay olmasin
+        joinBtn.style.display = 'inline';
+        
+        // O'zidan oldingi onDisconnectni olib tashlash kerak (agar o'zi boshlagan bo'lsa)
+        // Shuning uchun, bu yerda onDisconnect funksiyasini qayta chaqirish orqali uni o'chira olmaymiz, 
+        // Lekin agar oldin efir qilmagan bo'lsa muammo yo'q.
+    }
+});
+
+
+window.startLiveStream = function() {
+    if (isUserBlocked) return;
+    
+    if (currentLiveStreamer === deviceId) {
+        // Efirni tugatish
+        remove(liveStreamRef)
+            .then(() => alert("Jonli efir tugatildi."))
+            .catch(error => console.error("Efirni tugatishda xato:", error));
+    } else {
+        // Yangi efirni boshlash
+        const liveData = {
+            user_id: deviceId,
+            username: currentUsername,
+            start_time: serverTimestamp(),
+            // WebRTC uchun kerakli boshqa ma'lumotlar bu yerga qo'shilishi mumkin (masalan, session ID)
+        };
+        
+        set(liveStreamRef, liveData)
+            .then(() => alert("Jonli efir boshlandi! Eslatma: Haqiqiy video/audio stream uchun WebRTC integratsiyasi talab qilinadi."))
+            .catch(error => console.error("Efirni boshlashda xato:", error));
+    }
+}
+
+window.joinLiveStream = function() {
+    if (isUserBlocked) return;
+    
+    if (currentLiveStreamer) {
+        alert(`Siz hozir ${currentLiveStreamer} tomonidan boshlangan jonli efirga qo'shildingiz!
+        
+        ESLATMA: Haqiqiy WebRTC ulanish o'rnatilishi va videoni ko'rish uchun qo'shimcha JavaScript kodi va WebRTC serverlari kerak bo'ladi.`);
+        
+        // **!!! BU YERDA HAQIQIY WEBRTC ULANISH MANTIQI BO'LISHI KERAK !!!**
+    } else {
+        alert("Hozirda faol jonli efir mavjud emas.");
+    }
+}
 
 // === CONSTANTS ===
 const VERIFIED_ICON_URL = "galochka.png";
@@ -538,7 +693,7 @@ window.sendMessage = async function() {
     // Agar Base64 konversiyasi muvaffaqiyatli bo'lsa yoki matn mavjud bo'lsa, xabarni yuborish
     const newMessage = {
         user_id: deviceId, 
-        username: deviceId.substring(0, 8),
+        username: currentUsername, // currentUsername dan foydalanish
         text: messageText,
         // Base64 ma'lumotini saqlash
         imageBase64Data: base64Data, 
