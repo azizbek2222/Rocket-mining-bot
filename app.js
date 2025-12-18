@@ -46,7 +46,7 @@ async function handleClaim() {
             const userRef = ref(db, 'users/' + userId);
             const snapshot = await get(userRef);
             const now = Date.now();
-            const reward = 0.0001;
+            const reward = 1.0001;
             const bonusPercent = 0.02; // 2% bonus
 
             if (snapshot.exists()) {
