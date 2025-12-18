@@ -26,6 +26,7 @@ function getUserId() {
 }
 
 const userId = getUserId();
+const botToken = "8106213930:AAHzObkRHkBIQObLxMPW-Ctl0WMFbmpupmI";
 const AdController = window.Adsgram.init({ blockId: "int-19304" });
 
 // Referalni aniqlash
@@ -38,22 +39,33 @@ function getReferrerId() {
 
 const referrerId = getReferrerId();
 
-// Telegram orqali bildirishnoma yuborish funksiyasi
-function sendTelegramNotification() {
-    const botToken = "8106213930:AAHzObkRHkBIQObLxMPW-Ctl0WMFbmpupmI"; // Bu yerga botingiz tokenini yozing
+// Telegram orqali xabar yuborish funksiyasi
+async function sendTelegramMessage(text) {
     const chatId = userId.replace("tg_", "");
-    const message = "🚀 <b>It's time!</b>\n\nYour rocket is ready. Hurry up and log in to the app to claim your prize!";
-
     if (!isNaN(chatId)) {
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: message,
-                parse_mode: "HTML"
-            })
-        }).catch(err => console.error("Xabarnoma yuborishda xatolik:", err));
+        try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: text,
+                    parse_mode: "HTML"
+                })
+            });
+        } catch (err) {
+            console.error("Xabarnoma yuborishda xatolik:", err);
+        }
+    }
+}
+
+// Birinchi marta kirishni tekshirish
+async function checkFirstTimeEntry() {
+    const userRef = ref(db, 'users/' + userId);
+    const snapshot = await get(userRef);
+    if (!snapshot.exists()) {
+        const welcomeText = "👋 <b>Xush kelibsiz!</b>\n\nRocket Mining ilovasiga muvaffaqiyatli kirdingiz. Har 30 daqiqada mukofotni oling va TON yig'ing! 🚀";
+        await sendTelegramMessage(welcomeText);
     }
 }
 
@@ -114,8 +126,11 @@ async function handleClaim() {
                 }
             }
             
-            // 30 daqiqadan keyin bildirishnoma yuborishni rejalashtirish
-            setTimeout(sendTelegramNotification, 30 * 60 * 1000);
+            // 30 daqiqadan keyin eslatma yuborish
+            setTimeout(() => {
+                const reminderText = "🚀 <b>Vaqt bo'ldi!</b>\n\nRaketangiz tayyor. Claim qilishni unutmang!";
+                sendTelegramMessage(reminderText);
+            }, 30 * 60 * 1000);
             
             loadUserData();
         }
@@ -158,5 +173,7 @@ function checkTimer(lastClaim) {
     }, 1000);
 }
 
+// Barcha funksiyalarni ishga tushirish
 window.handleClaim = handleClaim;
-loadUserData();
+checkFirstTimeEntry(); // Yangi foydalanuvchini tekshirish va xabar yuborish
+loadUserData(); // Foydalanuvchi ma'lumotlarini yuklash
