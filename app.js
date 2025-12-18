@@ -29,19 +29,27 @@ const userId = getUserId();
 const botToken = "8106213930:AAHzObkRHkBIQObLxMPW-Ctl0WMFbmpupmI";
 const AdController = window.Adsgram.init({ blockId: "int-19304" });
 
-// TON Connect UI sozlamalari
+// TON Connect UI - Kesh muammosini oldini olish uchun manifestUrl oxiriga vaqt tamg'asi qo'shildi
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: 'https://raw.githubusercontent.com/ton-community/tutorials/main/03-client/test/public/tonconnect-manifest.json',
+    manifestUrl: 'https://azizbek2222.github.io/Rocket-mining-bot/tonconnect-manifest.json?v=' + Date.now(),
     buttonRootId: 'ton-connect-button'
 });
 
-// Hamyon holatini kuzatish va Firebasega saqlash
+// Hamyon holati o'zgarganda Firebasega yozish
 tonConnectUI.onStatusChange(async (wallet) => {
     if (wallet) {
         const walletAddress = wallet.account.address;
         const userRef = ref(db, 'users/' + userId);
-        await update(userRef, { wallet: walletAddress });
-        console.log("Hamyon ulandi va saqlandi:", walletAddress);
+        
+        try {
+            await update(userRef, { 
+                wallet: walletAddress,
+                walletConnected: true 
+            });
+            console.log("Hamyon muvaffaqiyatli saqlandi: " + walletAddress);
+        } catch (error) {
+            console.error("Firebasega saqlashda xato:", error);
+        }
     }
 });
 
@@ -69,7 +77,7 @@ async function sendTelegramMessage(text) {
                 })
             });
         } catch (err) {
-            console.error("Xabarnoma yuborishda xatolik:", err);
+            console.error("Telegram xabar yuborishda xatolik:", err);
         }
     }
 }
@@ -96,7 +104,10 @@ async function handleClaim() {
 
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                if (now - data.lastClaim < 30 * 60 * 1000) { alert("Kuting!"); return; }
+                if (now - data.lastClaim < 30 * 60 * 1000) { 
+                    window.Telegram.WebApp.showAlert("Iltimos, kuting!"); 
+                    return; 
+                }
                 
                 await update(userRef, { 
                     balance: (data.balance || 0) + reward, 
@@ -147,7 +158,10 @@ async function handleClaim() {
             
             loadUserData();
         }
-    } catch (e) { alert("Reklama yuklanmadi!"); console.error(e); }
+    } catch (e) { 
+        window.Telegram.WebApp.showAlert("Reklama yuklanmadi!"); 
+        console.error(e); 
+    }
 }
 
 function startRocketAnimation() {
