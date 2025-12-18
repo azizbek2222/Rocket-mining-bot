@@ -29,31 +29,6 @@ const userId = getUserId();
 const botToken = "8106213930:AAHzObkRHkBIQObLxMPW-Ctl0WMFbmpupmI";
 const AdController = window.Adsgram.init({ blockId: "int-19304" });
 
-// TON Connect UI - Kesh muammosini oldini olish uchun manifestUrl oxiriga vaqt tamg'asi qo'shildi
-const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: 'https://azizbek2222.github.io/Rocket-mining-bot/tonconnect-manifest.json?v=' + Date.now(),
-    buttonRootId: 'ton-connect-button'
-});
-
-// Hamyon holati o'zgarganda Firebasega yozish
-tonConnectUI.onStatusChange(async (wallet) => {
-    if (wallet) {
-        const walletAddress = wallet.account.address;
-        const userRef = ref(db, 'users/' + userId);
-        
-        try {
-            await update(userRef, { 
-                wallet: walletAddress,
-                walletConnected: true 
-            });
-            console.log("Hamyon muvaffaqiyatli saqlandi: " + walletAddress);
-        } catch (error) {
-            console.error("Firebasega saqlashda xato:", error);
-        }
-    }
-});
-
-// Referalni aniqlash
 function getReferrerId() {
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.start_param) {
         return "tg_" + window.Telegram.WebApp.initDataUnsafe.start_param;
