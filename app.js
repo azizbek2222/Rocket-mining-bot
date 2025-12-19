@@ -27,8 +27,9 @@ function getUserId() {
 
 const userId = getUserId();
 const botToken = "8106213930:AAHzObkRHkBIQObLxMPW-Ctl0WMFbmpupmI";
+let isNotificationSent = false; // 10 soniya qolganida xabar uchun flag
 
-// REKLAMA QISMI: blockId aniq "int-19304" ko'rinishida bo'lishi shart
+// REKLAMA QISMI
 const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "int-19356" }) : null;
 
 function getReferrerId() {
@@ -63,7 +64,7 @@ async function checkFirstTimeEntry() {
     const userRef = ref(db, 'users/' + userId);
     const snapshot = await get(userRef);
     if (!snapshot.exists()) {
-        const welcomeText = "👋 <b>Welcome!</b>\n\nYou have successfully logged in to the Rocket Mining app. Get rewards every 30 minutes and collect TON! 🚀";
+        const welcomeText = "👋 <b>Welcome!</b>\n\nYou have successfully logged in to the Rocket Mining app. Get rewards every 5 minutes and collect TON! 🚀";
         await sendTelegramMessage(welcomeText);
     }
 }
@@ -87,7 +88,7 @@ async function handleClaim() {
 
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                if (now - data.lastClaim < 30 * 60 * 1000) { 
+                if (now - data.lastClaim < 5 * 60 * 1000) { 
                     window.Telegram.WebApp.showAlert("Please wait!"); 
                     return; 
                 }
@@ -134,11 +135,7 @@ async function handleClaim() {
                 }
             }
             
-            setTimeout(() => {
-                const reminderText = "🚀 <b>It's time!</b>\n\nYour rocket is ready. Don't forget to claim it!";
-                sendTelegramMessage(reminderText);
-            }, 30 * 60 * 1000);
-            
+            isNotificationSent = false; // Taymerni qayta boshlash uchun reset
             loadUserData();
         } else {
             window.Telegram.WebApp.showAlert("You must watch the ad to the end to receive the reward..");
@@ -173,14 +170,27 @@ function checkTimer(lastClaim) {
     const btn = document.getElementById('claimBtn');
     const timerDiv = document.getElementById('timer');
     const interval = setInterval(() => {
-        const diff = (30 * 60 * 1000) - (Date.now() - lastClaim);
+        const diff = (5 * 60 * 1000) - (Date.now() - lastClaim);
+        
         if (diff <= 0) {
-            btn.disabled = false; btn.innerText = "CLAIM 0.0001 TON";
-            timerDiv.classList.add('hidden'); clearInterval(interval);
+            btn.disabled = false; 
+            btn.innerText = "CLAIM 0.0001 TON";
+            timerDiv.classList.add('hidden'); 
+            clearInterval(interval);
+            const reminderText = "🚀 <b>It's time!</b>\n\nYour rocket is ready. Don't forget to claim it!";
+            sendTelegramMessage(reminderText);
         } else {
-            btn.disabled = true; timerDiv.classList.remove('hidden');
+            btn.disabled = true; 
+            timerDiv.classList.remove('hidden');
             const m = Math.floor(diff / 60000), s = Math.floor((diff % 60000) / 1000);
             timerDiv.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+            // 10 soniya qolganida ogohlantirish yuborish
+            if (diff <= 10000 && !isNotificationSent) {
+                isNotificationSent = true;
+                const soonText = "⚠️ <b>Attention!</b>\n\nOnly 10 seconds left until your next claim! Get ready. 🚀";
+                sendTelegramMessage(soonText);
+            }
         }
     }, 1000);
 }
