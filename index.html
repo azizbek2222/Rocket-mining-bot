@@ -3,64 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rocket Mining</title>
+    <title>Rocket Mining - Winter Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
-        body { background: radial-gradient(circle, #1a1a2e 0%, #16213e 100%); color: white; overflow: hidden; }
-        .rocket-container { height: 300px; display: flex; align-items: center; justify-content: center; }
-        .rocket { font-size: 80px; transition: 0.5s; }
+        body { margin: 0; background: #02050a; overflow: hidden; font-family: 'Russo One', sans-serif; color: white; }
+        canvas { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+        .main-ui { position: relative; z-index: 10; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        .rocket-container { height: 250px; display: flex; align-items: center; justify-content: center; }
+        .rocket { font-size: 80px; transition: 0.5s; cursor: pointer; }
         .flying { animation: bounceInUp 1s infinite alternate; }
-        #access-denied { display: none; position: fixed; inset: 0; background: #1a1a2e; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-blur: 8px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; }
     </style>
 </head>
-<body class="flex flex-col items-center justify-between h-screen p-6">
+<body class="h-screen overflow-hidden">
 
-    <div id="access-denied">
-        <h1 class="text-2xl font-bold text-red-500 mb-4">Entry is prohibited!</h1>
-        <p>This app only works within <b>@rocket_mining_bot</b>.</p>
+    <canvas id="canvas"></canvas>
+
+    <div class="main-ui">
+        <div class="w-full glass-card p-4 text-center interactive">
+            <p class="text-gray-400 text-xs uppercase font-bold tracking-widest">Your Balance</p>
+            <h1 id="balance" class="text-3xl font-black text-blue-400">0.000000 TON</h1>
+            <button onclick="location.href='withdraw.html'" class="mt-3 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-6 py-1 rounded-full text-xs font-bold border border-blue-500/30 transition-all active:scale-95">
+                WITHDRAW ➔
+            </button>
+        </div>
+
+        <div class="rocket-container interactive">
+            <div id="rocket" class="rocket">🚀</div>
+        </div>
+
+        <div class="w-full space-y-4 interactive">
+            <div id="timer" class="text-center text-yellow-400 font-mono hidden text-xl font-bold">30:00</div>
+            
+            <button id="claimBtn" onclick="handleClaim()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all">
+                CLAIM 0.0001 TON
+            </button>
+
+            <button onclick="location.href='referal.html'" class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95">
+                <span>👥</span>
+                <span class="font-medium text-sm">INVITE FRIENDS</span>
+            </button>
+        </div>
     </div>
 
-    <div class="w-full bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/20 text-center relative">
-        <p class="text-gray-400 text-sm uppercase font-bold">Your Balance</p>
-        <h1 id="balance" class="text-3xl font-black text-blue-400">0.000000 TON</h1>
-        
-        <button onclick="location.href='withdraw.html'" class="mt-3 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-6 py-1 rounded-full text-xs font-bold border border-blue-500/30 transition-all active:scale-95">
-            WITHDRAW ➔
-        </button>
-    </div>
-
-    <div class="rocket-container">
-        <div id="rocket" class="rocket">🚀</div>
-    </div>
-
-    <div class="w-full space-y-4">
-        <div id="timer" class="text-center text-yellow-400 font-mono hidden">30:00</div>
-        
-        <button id="claimBtn" onclick="handleClaim()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg transform active:scale-95 transition-all">
-            CLAIM 0.0001 TON
-        </button>
-
-        <button onclick="location.href='referal.html'" class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95">
-            <span>👥</span>
-            <span class="font-medium text-sm">INVITE FRIENDS</span>
-        </button>
-    </div>
-
+    <script type="module" src="app.js"></script>
     <script>
-        // Brauzerda ochilganda darhol bloklash
-        if (!window.Telegram.WebApp.initDataUnsafe.user) {
-            document.getElementById('access-denied').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            window.stop();
+        // BACKGROUND ANIMATION LOGIC
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let groundSnow = new Array(Math.ceil(canvas.width)).fill(0);
+        let time = 0;
+
+        function drawRealTree(x, y, len, angle, branchWidth) {
+            ctx.beginPath(); ctx.save();
+            ctx.strokeStyle = "#0a220a"; ctx.lineWidth = branchWidth;
+            ctx.translate(x, y); ctx.rotate(angle * Math.PI / 180);
+            ctx.moveTo(0, 0); ctx.lineTo(0, -len); ctx.stroke();
+            if (len < 40 && Math.random() < 0.3) {
+                const hue = (time + len * 5) % 360;
+                const brightness = Math.abs(Math.sin(time / 20 + len));
+                ctx.beginPath(); ctx.arc(0, -len / 2, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${brightness})`;
+                ctx.shadowBlur = 8 * brightness; ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                ctx.fill(); ctx.shadowBlur = 0;
+            }
+            if (len < 10) {
+                ctx.beginPath(); ctx.arc(0, -len, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fill();
+                ctx.restore(); return;
+            }
+            drawRealTree(0, -len, len * 0.75, angle + 25, branchWidth * 0.7);
+            drawRealTree(0, -len, len * 0.75, angle - 25, branchWidth * 0.7);
+            ctx.restore();
         }
-    </script>
-    <script type="module" src="httyjki6tgj.js"></script>
-    <script>
+
+        class Snowflake {
+            constructor() { this.reset(); this.y = Math.random() * canvas.height; }
+            reset() {
+                this.x = Math.random() * canvas.width; this.y = -15;
+                this.size = Math.random() * 2 + 2; this.speed = Math.random() * 1.5 + 1;
+                this.velX = Math.random() * 0.6 - 0.3;
+            }
+            update() {
+                this.y += this.speed; this.x += this.velX;
+                let col = Math.floor(this.x);
+                if (col >= 0 && col < canvas.width && this.y >= canvas.height - groundSnow[col]) {
+                    for(let i = -2; i < 2; i++) if (groundSnow[col+i] !== undefined) groundSnow[col+i] += 0.7;
+                    this.reset();
+                }
+                if (this.y > canvas.height) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = "white"; ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size/2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        class Firework {
+            constructor() {
+                this.x = Math.random() * canvas.width; this.y = canvas.height;
+                this.targetY = Math.random() * (canvas.height * 0.45) + 50;
+                this.speed = 7; this.color = `hsl(${Math.random() * 360}, 100%, 75%)`;
+            }
+            update() { this.y -= this.speed; return this.y <= this.targetY; }
+            draw() {
+                ctx.fillStyle = this.color; ctx.beginPath(); 
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.vx = (Math.random() - 0.5) * 14; this.vy = (Math.random() - 0.5) * 14;
+                this.alpha = 1; this.gravity = 0.15;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.vy += this.gravity; this.vx *= 0.97; this.vy *= 0.97; this.alpha -= 0.008; }
+            draw() {
+                if (Math.random() > 0.1) {
+                    ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+        }
+
+        let snowflakes = Array.from({length: 120}, () => new Snowflake());
+        let fireworks = [], particles = [];
+
+        function animateBg() {
+            time++;
+            ctx.fillStyle = 'rgba(2, 5, 10, 0.4)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (Math.random() < 0.005) fireworks.push(new Firework());
+            fireworks.forEach((f, i) => {
+                f.draw();
+                if (f.update()) {
+                    if(window.playExp) window.playExp(); 
+                    for(let j=0; j<80; j++) particles.push(new Particle(f.x, f.y, f.color));
+                    fireworks.splice(i, 1);
+                }
+            });
+
+            particles.forEach((p, i) => {
+                p.draw(); p.update();
+                if (p.alpha <= 0) particles.splice(i, 1);
+            });
+
+            drawRealTree(canvas.width * 0.15, canvas.height - groundSnow[Math.floor(canvas.width*0.15)], 60, 0, 8);
+            drawRealTree(canvas.width * 0.85, canvas.height - groundSnow[Math.floor(canvas.width*0.85)], 70, 0, 10);
+            
+            ctx.fillStyle = "white"; ctx.beginPath(); ctx.moveTo(0, canvas.height);
+            for (let x = 0; x < canvas.width; x++) ctx.lineTo(x, canvas.height - groundSnow[x]);
+            ctx.lineTo(canvas.width, canvas.height); ctx.fill();
+
+            ctx.globalAlpha = 1;
+            snowflakes.forEach(s => { s.draw(); s.update(); });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
         window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand(); // Ilovani to'liq ekranda ochish
     </script>
 </body>
 </html>
