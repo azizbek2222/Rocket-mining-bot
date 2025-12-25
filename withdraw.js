@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get, update, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+// Firebase sozlamalari (O'zgartirmang)
 const firebaseConfig = {
     apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
     authDomain: "user1111-c84a0.firebaseapp.com",
@@ -18,22 +19,20 @@ webApp.ready();
 
 const userId = webApp.initDataUnsafe?.user ? "tg_" + webApp.initDataUnsafe.user.id : (localStorage.getItem('mining_uid') || "guest");
 
-const savedWallet = localStorage.getItem('user_ton_wallet');
-if(savedWallet) {
-    document.getElementById('walletAddr').value = savedWallet;
-}
-
 document.getElementById('withdrawBtn').onclick = async () => {
     const addrInput = document.getElementById('walletAddr');
     const amountInput = document.getElementById('amount');
     const msg = document.getElementById('msg');
     
+    // Global kutubxonalarni chaqirish
+    const Ton = window.Ton;
+    const TonCrypto = window.TonCrypto;
+
     const wallet = addrInput.value.trim();
     const amount = parseFloat(amountInput.value);
 
-    if (wallet.length < 10 || isNaN(amount) || amount < 0.0001) {
+    if (wallet.length < 10 || isNaN(amount)) {
         msg.innerText = "❌ Ma'lumotlarni to'g'ri kiriting!";
-        msg.className = "text-center text-red-400 font-medium";
         return;
     }
 
@@ -45,19 +44,19 @@ document.getElementById('withdrawBtn').onclick = async () => {
             const balance = snapshot.val().balance || 0;
             if (balance < amount) {
                 msg.innerText = "❌ Balans yetarli emas!";
-                msg.className = "text-center text-red-400 font-medium";
                 return;
             }
 
             msg.innerText = "⏳ Tranzaksiya yuborilmoqda...";
 
-            // --- AVTO TO'LOV QISMI ---
+            // 1. TON Client sozlash
             const client = new Ton.TonClient({
                 endpoint: 'https://toncenter.com/api/v2/jsonRPC',
                 apiKey: '60134015690b23023e356e9f65d19a287a93a199859344426543b591b68019b1' 
             });
 
-            // BU YERGA O'ZINGIZNING 24 TA SO'ZINGIZNI YOZING
+            // 2. Mnemonic orqali hamyonni ochish
+            // BU YERGA 24 TA SO'ZINGIZNI YOZING
             const mnemonic = "broom moral speak annual believe input palm subway auto harbor about render dilemma when bean course guide flavor obvious defense rural title electric collect"; 
             const keyPair = await TonCrypto.mnemonicToPrivateKey(mnemonic.split(" "));
             
@@ -69,6 +68,7 @@ document.getElementById('withdrawBtn').onclick = async () => {
             const contract = client.open(myWallet);
             const seqno = await contract.getSeqno();
 
+            // 3. Yuborish
             await contract.sendTransfer({
                 secretKey: keyPair.secretKey,
                 seqno: seqno,
@@ -80,28 +80,15 @@ document.getElementById('withdrawBtn').onclick = async () => {
                     })
                 ]
             });
-            // --------------------------
 
-            localStorage.setItem('user_ton_wallet', wallet);
-
-            const requestRef = push(ref(db, 'withdraw_requests'));
-            await set(requestRef, {
-                uid: userId,
-                address: wallet,
-                amount: amount,
-                status: 'completed', // Avtomatik bo'lgani uchun completed
-                date: new Date().toLocaleString()
-            });
-
+            // Firebase yangilash
             await update(userRef, { balance: balance - amount });
             
-            msg.innerText = "✅ Pul hamyonga yuborildi!";
-            msg.className = "text-center text-green-400 font-medium";
+            msg.innerText = "✅ Pul yuborildi!";
             amountInput.value = "";
         }
     } catch (err) {
         console.error(err);
         msg.innerText = "❌ Xatolik: " + err.message;
-        msg.className = "text-center text-red-400 font-medium";
     }
 };
