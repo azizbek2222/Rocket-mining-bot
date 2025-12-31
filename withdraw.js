@@ -43,8 +43,8 @@ document.getElementById('withdrawBtn').onclick = async () => {
         return;
     }
 
-    if (isNaN(amount) || amount < 0.1) {
-        msg.innerText = "❌ Minimum quantity 0.1 TON";
+    if (isNaN(amount) || amount < 0.01) {
+        msg.innerText = "❌ Minimum quantity 0.01 TON";
         msg.className = "text-center text-red-400 font-medium";
         return;
     }
