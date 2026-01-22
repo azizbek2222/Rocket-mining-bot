@@ -6,7 +6,7 @@ webApp.expand();
 const userId = getUserId();
 
 // AdsGram Block IDlar ro'yxati (4 ta)
-const adBlockIds = ["int-19356", "int-1234", "int-5678", "int-9012"]; // O'zingizning haqiqiy IDlaringizni yozing
+const adBlockIds = ["int-19356", "int-21586", "int-21587", "int-21588"]; // O'zingizning haqiqiy IDlaringizni yozing
 
 // Holatni boshqarish
 let fuel = 0;
