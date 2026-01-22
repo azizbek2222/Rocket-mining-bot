@@ -3,13 +3,9 @@ if (window.location.hostname !== "azizbek2222.github.io") {
     throw new Error("Illegal Mirror detected. Script execution stopped.");
 }
 
-// 1. Importlar
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-// App Check uchun kerakli importlar
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
-// 2. Konfiguratsiya
 const firebaseConfig = {
     apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
     authDomain: "user1111-c84a0.firebaseapp.com",
@@ -20,16 +16,7 @@ const firebaseConfig = {
     appId: "1:901723757936:web:9da0a1c7ec494f4a0c03b5"
 };
 
-// 3. Firebase-ni ishga tushirish
 const app = initializeApp(firebaseConfig);
-
-// 4. MANA SHU YERGA QO'YASIZ (App Check)
-const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaEnterpriseProvider('6LeDP0IsAAAAAJqLR8fT-FWQ-a440HlC_NBCa79s'), // Bu yerga o'sha uzun kalitni qo'ying
-  isTokenAutoRefreshEnabled: true 
-});
-
-// 5. Bazani ishga tushirish (Endi baza himoyalangan holda ishlaydi)
 const db = getDatabase(app);
 const userId = getUserId();
 const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "int-19356" }) : null;
