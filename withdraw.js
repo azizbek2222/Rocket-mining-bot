@@ -1,56 +1,53 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, get, update, increment, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDIeG8dVbm0Yk7FR1hPzrBoD7rgDKWAFoY",
+    authDomain: "user1111-c84a0.firebaseapp.com",
+    databaseURL: "https://user1111-c84a0-default-rtdb.firebaseio.com",
+    projectId: "user1111-c84a0",
+    storageBucket: "user1111-c84a0.firebasestorage.app",
+    messagingSenderId: "901723757936",
+    appId: "1:901723757936:web:9da0a1c7ec494f4a0c03b5"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 const webApp = window.Telegram.WebApp;
-const userId = webApp.initDataUnsafe?.user ? "tg_" + webApp.initDataUnsafe.user.id : (localStorage.getItem('mining_uid') || "guest");
 
-function getData() {
-    const data = localStorage.getItem('data_' + userId);
-    return data ? JSON.parse(data) : { balance: 0 };
-}
+const userId = webApp.initDataUnsafe?.user ? "tg_" + webApp.initDataUnsafe.user.id : "guest";
 
-function saveData(data) {
-    localStorage.setItem('data_' + userId, JSON.stringify(data));
-}
-
-const savedWallet = localStorage.getItem('user_ton_wallet');
-if(savedWallet) {
-    document.getElementById('walletAddr').value = savedWallet;
-}
-
-document.getElementById('withdrawBtn').onclick = () => {
-    const addrInput = document.getElementById('walletAddr');
-    const amountInput = document.getElementById('amount');
+document.getElementById('withdrawBtn').onclick = async () => {
+    const addr = document.getElementById('walletAddr').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
     const msg = document.getElementById('msg');
-    
-    const wallet = addrInput.value.trim();
-    const amount = parseFloat(amountInput.value);
 
-    if (wallet.length < 10) {
-        msg.innerText = "❌ Enter correct wallet address!";
-        msg.className = "text-center text-red-400 font-medium";
+    if (addr.length < 10 || isNaN(amount) || amount < 0.01) {
+        msg.innerText = "❌ Ma'lumotlar xato!";
         return;
     }
 
-    if (isNaN(amount) || amount < 0.01) {
-        msg.innerText = "❌ Min quantity 0.01 TON";
-        msg.className = "text-center text-red-400 font-medium";
+    const userRef = ref(db, 'users/' + userId);
+    const snap = await get(userRef);
+    const userData = snap.val();
+
+    if (userData.balance < amount) {
+        msg.innerText = "❌ Balans yetarli emas!";
         return;
     }
 
-    let userState = getData();
-    if (userState.balance < amount) {
-        msg.innerText = "❌ Insufficient balance!";
-        msg.className = "text-center text-red-400 font-medium";
-        return;
-    }
+    // Balansni kamaytirish
+    await update(userRef, { balance: increment(-amount) });
 
-    // Balansni kamaytirish va saqlash
-    userState.balance -= amount;
-    saveData(userState);
-    localStorage.setItem('user_ton_wallet', wallet);
+    // Admin uchun so'rov qoldirish
+    await push(ref(db, 'withdraw_requests'), {
+        uid: userId,
+        address: addr,
+        amount: amount,
+        status: "pending",
+        date: new Date().toISOString()
+    });
 
-    msg.innerText = "✅ Request submitted (Local Mode)";
-    msg.className = "text-center text-green-400 font-medium";
-    amountInput.value = "";
-    
-    // Telegramga xabar yuborish (ixtiyoriy)
-    webApp.showAlert("Withdrawal request recorded locally.");
+    msg.innerText = "✅ So'rov yuborildi!";
+    webApp.showAlert("Withdrawal request sent to admin.");
 };
