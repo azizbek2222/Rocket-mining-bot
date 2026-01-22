@@ -4,7 +4,9 @@ webApp.ready();
 webApp.expand();
 
 const userId = getUserId();
-const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "int-19356" }) : null;
+
+// AdsGram Block IDlar ro'yxati (4 ta)
+const adBlockIds = ["int-19356", "int-1234", "int-5678", "int-9012"]; // O'zingizning haqiqiy IDlaringizni yozing
 
 // Holatni boshqarish
 let fuel = 0;
@@ -31,10 +33,39 @@ function saveData(data) {
     localStorage.setItem('data_' + userId, JSON.stringify(data));
 }
 
+// Tasodifiy reklama ko'rsatish funksiyasi
+async function showAd() {
+    // Tasodifiy ID tanlash
+    const randomBlockId = adBlockIds[Math.floor(Math.random() * adBlockIds.length)];
+    const AdController = window.Adsgram ? window.Adsgram.init({ blockId: randomBlockId }) : null;
+
+    if (!AdController) {
+        webApp.showAlert("Ad blocker detected or AdsGram not loaded.");
+        return false;
+    }
+
+    try {
+        const result = await AdController.show();
+        // Faqat reklama oxirigacha ko'rilsa (done: true) natija qaytadi
+        if (result.done) {
+            return true;
+        } else {
+            webApp.showAlert("Reklamani oxirigacha ko'rishingiz kerak!");
+            return false;
+        }
+    } catch (e) {
+        console.error("Ad error:", e);
+        webApp.showAlert("Reklama yuklashda xatolik yuz berdi.");
+        return false;
+    }
+}
+
 window.refuel = async () => {
     if (fuel >= 100 || isMining) return;
-    const res = await showAd();
-    if (res) {
+    
+    // Reklama ko'rilishini kutish
+    const success = await showAd();
+    if (success) {
         fuel = Math.min(fuel + 50, 100);
         updateUI();
         checkLaunch();
@@ -43,27 +74,15 @@ window.refuel = async () => {
 
 window.chargeShield = async () => {
     if (shield >= 100 || isMining) return;
-    const res = await showAd();
-    if (res) {
+    
+    // Reklama ko'rilishini kutish
+    const success = await showAd();
+    if (success) {
         shield = Math.min(shield + 50, 100);
         updateUI();
         checkLaunch();
     }
 };
-
-async function showAd() {
-    if (!AdController) {
-        // Test rejimi uchun reklamasiz ham ishlash (agar AdController bo'lmasa)
-        return true; 
-    }
-    try {
-        const result = await AdController.show();
-        return result.done;
-    } catch (e) {
-        webApp.showAlert("No ads available, but proceeding...");
-        return true;
-    }
-}
 
 function updateUI() {
     document.getElementById('fuelFill').style.width = fuel + "%";
