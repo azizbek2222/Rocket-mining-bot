@@ -21,37 +21,42 @@ const adBlockIds = ["int-19356", "int-21586", "int-21587", "int-21588"];
 
 let fuel = 0, shield = 0, isMining = false;
 
-// Foydalanuvchini yuklash va Referal tizimini tekshirish
+// 1. Foydalanuvchini yuklash va mining holatini tekshirish
 async function initUser() {
     const userRef = ref(db, 'users/' + userId);
-    const snap = await get(userRef);
-    
-    if (!snap.exists()) {
-        const startParam = webApp.initDataUnsafe.start_param; 
-        const newUser = {
-            balance: 0,
-            referralCount: 0,
-            referralEarnings: 0,
-            referredBy: (startParam && "tg_" + startParam !== userId) ? "tg_" + startParam : null,
-            isMining: false,
-            lastLaunch: null
-        };
-        await set(userRef, newUser);
+    try {
+        const snap = await get(userRef);
+        if (!snap.exists()) {
+            const startParam = webApp.initDataUnsafe.start_param; 
+            const newUser = {
+                balance: 0,
+                referralCount: 0,
+                referralEarnings: 0,
+                referredBy: (startParam && "tg_" + startParam !== userId) ? "tg_" + startParam : null,
+                isMining: false,
+                lastLaunch: null
+            };
+            await set(userRef, newUser);
 
-        // Taklif qilgan odamga +1 referal qo'shish
-        if (newUser.referredBy) {
-            await update(ref(db, 'users/' + newUser.referredBy), {
-                referralCount: increment(1)
-            });
+            if (newUser.referredBy) {
+                await update(ref(db, 'users/' + newUser.referredBy), {
+                    referralCount: increment(1)
+                });
+            }
         }
+        await loadUserData(); // Ma'lumotlarni yuklashni kutish
+    } catch (e) {
+        console.error("Firebase Init Error:", e);
     }
-    loadUserData();
 }
 
 async function showAd() {
     const randomBlockId = adBlockIds[Math.floor(Math.random() * adBlockIds.length)];
     const AdController = window.Adsgram ? window.Adsgram.init({ blockId: randomBlockId }) : null;
-    if (!AdController) return false;
+    if (!AdController) {
+        webApp.showAlert("Reklama yuklanmadi");
+        return false;
+    }
     try {
         const result = await AdController.show();
         return result.done;
@@ -59,102 +64,156 @@ async function showAd() {
 }
 
 window.refuel = async () => {
-    if (fuel < 100 && !isMining && await showAd()) {
-        fuel = Math.min(fuel + 50, 100);
-        updateUI(); checkLaunch();
+    if (fuel < 100 && !isMining) {
+        const success = await showAd();
+        if (success) {
+            fuel = Math.min(fuel + 50, 100);
+            updateUI(); 
+            checkLaunch(); // Yoqilg'i bergandan so'ng tekshirish
+        }
     }
 };
 
 window.chargeShield = async () => {
-    if (shield < 100 && !isMining && await showAd()) {
-        shield = Math.min(shield + 50, 100);
-        updateUI(); checkLaunch();
+    if (shield < 100 && !isMining) {
+        const success = await showAd();
+        if (success) {
+            shield = Math.min(shield + 50, 100);
+            updateUI(); 
+            checkLaunch(); // Qalqon bergandan so'ng tekshirish
+        }
     }
 };
 
+// Raketa ishga tushishini tekshirish
 function checkLaunch() {
-    if (fuel >= 100 && shield >= 100 && !isMining) startMining();
+    if (fuel >= 100 && shield >= 100 && !isMining) {
+        console.log("Raketa ishga tushmoqda...");
+        startMining();
+    }
 }
 
 async function startMining() {
+    if (isMining) return;
     isMining = true;
     const now = Date.now();
-    await update(ref(db, 'users/' + userId), { lastLaunch: now, isMining: true });
-    triggerRocketAnimation(true);
-    startTimer(10 * 60);
+    
+    try {
+        // Firebase-ga mining boshlanganini yozish
+        await update(ref(db, 'users/' + userId), { 
+            lastLaunch: now, 
+            isMining: true 
+        });
+        
+        triggerRocketAnimation(true);
+        startTimer(600); // 10 daqiqa (600 sekund)
+    } catch (e) {
+        isMining = false;
+        console.error("Mining Start Error:", e);
+    }
 }
 
 window.finalClaim = async () => {
     const userRef = ref(db, 'users/' + userId);
-    const snap = await get(userRef);
-    const data = snap.val();
-    const amount = 0.0001;
+    try {
+        const snap = await get(userRef);
+        const data = snap.val();
+        const amount = 0.0001;
 
-    // Asosiy balansni oshirish
-    await update(userRef, {
-        balance: increment(amount),
-        isMining: false,
-        lastLaunch: null
-    });
-
-    // Referalga 2% bonus berish
-    if (data.referredBy) {
-        const bonus = amount * 0.02;
-        await update(ref(db, 'users/' + data.referredBy), {
-            balance: increment(bonus),
-            referralEarnings: increment(bonus)
+        await update(userRef, {
+            balance: increment(amount),
+            isMining: false,
+            lastLaunch: null
         });
-    }
 
-    fuel = 0; shield = 0; isMining = false;
-    document.getElementById('claimBtn').classList.add('hidden');
-    triggerRocketAnimation(false);
-    loadUserData();
-    updateUI();
-    webApp.showAlert("Success! 0.0001 TON added.");
+        if (data.referredBy) {
+            const bonus = amount * 0.02;
+            await update(ref(db, 'users/' + data.referredBy), {
+                balance: increment(bonus),
+                referralEarnings: increment(bonus)
+            });
+        }
+
+        fuel = 0; shield = 0; isMining = false;
+        document.getElementById('claimBtn').classList.add('hidden');
+        triggerRocketAnimation(false);
+        await loadUserData();
+        updateUI();
+        webApp.showAlert("Muvaffaqiyatli! 0.0001 TON qo'shildi.");
+    } catch (e) {
+        console.error("Claim Error:", e);
+    }
 };
 
 function startTimer(seconds) {
     const timerDisplay = document.getElementById('timerDisplay');
     timerDisplay.classList.remove('hidden');
-    const interval = setInterval(() => {
-        const m = Math.floor(seconds / 60), s = seconds % 60;
+    
+    // Eski interval bo'lsa tozalash
+    if (window.miningInterval) clearInterval(window.miningInterval);
+
+    window.miningInterval = setInterval(() => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
         timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-        if (seconds-- <= 0) {
-            clearInterval(interval);
+        
+        if (seconds <= 0) {
+            clearInterval(window.miningInterval);
             timerDisplay.classList.add('hidden');
             document.getElementById('claimBtn').classList.remove('hidden');
+            triggerRocketAnimation(false);
         }
+        seconds--;
     }, 1000);
 }
 
 async function loadUserData() {
-    const snap = await get(ref(db, 'users/' + userId));
-    if (snap.exists()) {
-        const data = snap.val();
-        document.getElementById('balance').innerText = (data.balance || 0).toFixed(6) + " TON";
-        
-        if (data.isMining && data.lastLaunch) {
-            const elapsed = Math.floor((Date.now() - data.lastLaunch) / 1000);
-            const remaining = 600 - elapsed;
-            if (remaining > 0) {
-                fuel = 100; shield = 100; isMining = true;
-                updateUI(); triggerRocketAnimation(true); startTimer(remaining);
-            } else {
-                document.getElementById('claimBtn').classList.remove('hidden');
+    try {
+        const snap = await get(ref(db, 'users/' + userId));
+        if (snap.exists()) {
+            const data = snap.val();
+            document.getElementById('balance').innerText = (data.balance || 0).toFixed(6) + " TON";
+            
+            if (data.isMining && data.lastLaunch) {
+                const elapsed = Math.floor((Date.now() - data.lastLaunch) / 1000);
+                const remaining = 600 - elapsed;
+                
+                if (remaining > 0) {
+                    fuel = 100; shield = 100; isMining = true;
+                    updateUI(); 
+                    triggerRocketAnimation(true); 
+                    startTimer(remaining);
+                } else {
+                    fuel = 100; shield = 100; isMining = true;
+                    updateUI();
+                    document.getElementById('claimBtn').classList.remove('hidden');
+                    triggerRocketAnimation(false);
+                }
             }
         }
+    } catch (e) {
+        console.error("Load Data Error:", e);
     }
 }
 
 function triggerRocketAnimation(active) {
     const r = document.getElementById('rocket');
-    active ? r.classList.add('flying-mode') : r.classList.remove('flying-mode');
+    if (!r) return;
+    if (active) {
+        r.classList.add('flying-mode');
+        r.style.animation = "bounceInUp 1s infinite alternate";
+    } else {
+        r.classList.remove('flying-mode');
+        r.style.animation = "none";
+    }
 }
 
 function updateUI() {
-    document.getElementById('fuelFill').style.width = fuel + "%";
-    document.getElementById('shieldFill').style.width = shield + "%";
+    const fFill = document.getElementById('fuelFill');
+    const sFill = document.getElementById('shieldFill');
+    if (fFill) fFill.style.width = fuel + "%";
+    if (sFill) sFill.style.width = shield + "%";
 }
 
+// Hammasini ishga tushirish
 initUser();
